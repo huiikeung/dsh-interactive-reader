@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Shrink the system-prompt disclosure triangle to a smaller chevron.
+
 ## 0.3.0
 
 - Revert the custom model-retry card to DSH's native default: a quiet `details` disclosure showing the retry status, delay and failure reason (no custom icon column or timeline).

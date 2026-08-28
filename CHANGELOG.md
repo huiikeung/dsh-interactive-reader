@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4
+
+- Tune the model-retry card: neutral icon color, a different icon, and vertical rule alignment with the header.
+
 ## 0.2.3
 
 - Replace the model-retry node's raw JSON block with a structured RetryCard.

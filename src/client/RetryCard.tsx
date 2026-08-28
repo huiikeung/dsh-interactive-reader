@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ModelRetryNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import { IconChevronDownOutline14, IconRefreshOutline14 } from '@deepseek-ai/dsh-client-ui-primitives';
+import { IconChevronDownOutline14, IconQueueOutline14 } from '@deepseek-ai/dsh-client-ui-primitives';
 import css from './Reader.module.css';
 
 const duration = (ms: number) => ms < 1000 ? `${Math.round(ms)} 毫秒` : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} 秒`;
@@ -17,7 +17,7 @@ export function RetryCard({ attempts }: { attempts: readonly ModelRetryNode[] })
   return (
     <div className={css.retry} data-open={open || undefined}>
       <button type="button" className={css.retryHeader} aria-expanded={open} onClick={() => setOpen(value => !value)}>
-        <IconRefreshOutline14 className={css.retryIcon} />
+        <IconQueueOutline14 className={css.retryIcon} />
         <span className={css.retryTitle}>模型重试记录</span>
         <span className={css.retryMeta}>{summary}</span>
         <IconChevronDownOutline14 className={css.retryChevron} />

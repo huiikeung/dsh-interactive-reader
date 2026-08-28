@@ -227,15 +227,15 @@
 
 /* Structured model-retry disclosure, replacing the raw JSON fallback. */
 .retry { min-width: 0; }
-.retryHeader { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
+.retryHeader { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px 5px 6px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
 .retryHeader:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .retryHeader:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
-.retryIcon { flex: none; color: var(--dsw-alias-state-warn-primary); }
+.retryIcon { flex: none; color: var(--dsw-alias-label-secondary); }
 .retryTitle { flex: none; font-weight: 500; color: var(--dsw-alias-label-secondary); }
 .retryMeta { flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
 .retryChevron { flex: none; stroke: currentColor; fill: none; stroke-width: 1.4; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
 .retry[data-open] .retryChevron { transform: rotate(180deg); }
-.retryBody { margin: 4px 0 0 6px; padding: 10px 0 0 12px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
+.retryBody { margin: 4px 0 0 6px; padding: 10px 0 0 22px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
 .retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
 .retryItem { min-width: 0; }
 .retryItem + .retryItem { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--dsw-alias-border-l1); }

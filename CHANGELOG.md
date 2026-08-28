@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- Revert the custom model-retry card to DSH's native default: a quiet `details` disclosure showing the retry status, delay and failure reason (no custom icon column or timeline).
+
 ## 0.2.9
 
 - Center the timeline dot precisely on the model-retry rule.

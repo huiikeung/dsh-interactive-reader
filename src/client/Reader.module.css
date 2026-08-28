@@ -226,24 +226,16 @@
 @media (pointer: coarse) { .disclosureButton { min-height: 44px; } }
 @media (max-width: 600px) { .root { padding-inline: 20px; } .column { gap: 18px; } .toolbar { font-size: 11px; } .user { max-width: 90%; } }
 
-/* Structured model-retry disclosure, replacing the raw JSON fallback. */
-.retry { min-width: 0; }
-.retryHeader { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: start; gap: 10px; width: 100%; padding: 5px 14px 4px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
-.retryHeader:hover { background: var(--dsw-alias-interactive-bg-hover); }
-.retryHeader:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
-.retryGlyph { display: flex; align-items: center; justify-content: center; height: 22px; color: var(--dsw-alias-label-secondary); }
-.retryTitle { min-width: 0; font-weight: 500; font-size: 12px; line-height: 20px; color: var(--dsw-alias-label-secondary); }
-.retryMeta { justify-self: end; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
-.retryChevron { flex: none; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
-.retry[data-open] .retryChevron { transform: rotate(180deg); }
-.retryBody { margin: 4px 0 0 24px; padding: 2px 0 0 20px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
-.retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
-.retryItem { position: relative; min-width: 0; }
-.retryItem::before { content: ''; position: absolute; left: -23.5px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
-.retryItem + .retryItem { margin-top: 14px; }
-.retryItemHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
-.retryItemTag { padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary); }
-.retryItemDelay { color: var(--dsw-alias-label-tertiary); }
-.retryItemState { color: var(--dsw-alias-label-tertiary); }
-.retryItemFailure { display: flex; align-items: baseline; gap: 8px; margin-top: 3px; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; white-space: pre-wrap; }
-.retryItemCode { flex: none; padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-state-error-tertiary); color: var(--dsw-alias-state-error-primary); font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }
+/* Native-style model-retry disclosure, mirroring DSH's default renderer. */
+.retryRow { color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 20px; }
+.retrySummary { display: inline-flex; align-items: center; width: fit-content; padding: 2px 0; gap: 7px; border-radius: 3px; color: inherit; cursor: pointer; list-style: none; user-select: none; }
+.retrySummary::-webkit-details-marker { display: none; }
+.retrySummary::after { width: 6px; height: 6px; border-right: 1.5px solid currentcolor; border-bottom: 1.5px solid currentcolor; content: ''; opacity: .8; transform: rotate(-45deg); transition: transform 120ms ease; }
+.retrySummary:hover { color: var(--dsw-alias-label-secondary); }
+.retrySummary:focus-visible { outline: 1.5px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+.retryText { color: inherit; }
+.retryRow[data-active] .retryText { background: linear-gradient(90deg, var(--dsw-alias-label-tertiary) 0%, var(--dsw-alias-label-tertiary) 40%, var(--dsw-alias-label-secondary) 50%, var(--dsw-alias-label-tertiary) 60%, var(--dsw-alias-label-tertiary) 100%); background-position: 100% 50%; background-size: 200% 100%; background-clip: text; -webkit-background-clip: text; color: transparent; animation: retry-shimmer 1.6s ease-in-out infinite; }
+.retryRow[open] .retrySummary::after { transform: rotate(45deg); }
+.retryDetails { display: grid; gap: 2px; margin-top: 3px; padding-left: 14px; overflow-wrap: anywhere; font-size: 13px; line-height: 18px; }
+.retryDetailLabel { color: var(--dsw-alias-label-secondary); }
+@keyframes retry-shimmer { 0%, 100% { background-position: 100% 50%; } 50% { background-position: 0% 50%; } }

@@ -23,7 +23,9 @@ export function readerFlow(group: ReaderGroup, turn: TurnLocation | undefined, g
     if (node.kind === 'tool-call') {
       const block = (node.data as { root: ToolCallBlock }).root;
       calls.set(block.callId, { kind: 'tool', key: `reader-tool:${block.callId}`, callId: block.callId, step, block, order: node.anchorSeq });
-    } else {
+    } else if (node.kind !== 'turn-process') {
+      // alpha.1 projects this synthetic disclosure controller into the public
+      // order. Reader owns its own disclosure, so it is not transcript content.
       flow.push({ kind: 'node', key, nodeKey: key, order: node.anchorSeq });
       if (node.kind === 'assistant-step') assistantOrder.set(step, node.anchorSeq);
     }

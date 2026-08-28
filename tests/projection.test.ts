@@ -142,6 +142,23 @@ test('tool input is visible before execution, including native-hidden tool-only 
   assert.equal(running[0]?.key, pending[0].key, 'one call keeps the same React key at execution');
 });
 
+test('alpha.1 turn-process controls do not render as transcript content', () => {
+  const turn = { turn: 1, steps: [] } as unknown as TurnLocation;
+  const control = {
+    key: 'turn-process:1', kind: 'turn-process', visibility: 'visible', anchorSeq: 2,
+    data: { turn: 1 }, location: { kind: 'turn', turn },
+  } as unknown as ChatConversationViewNode;
+  const reasoning = {
+    key: 'assistant:1', kind: 'assistant-step', visibility: 'visible', anchorSeq: 3,
+    data: assistant({ blocks: [{ kind: 'reasoning', text: '真实思考' }, text] }),
+    location: { kind: 'turn', turn },
+  } as unknown as ChatConversationViewNode;
+  const nodes = new Map([[control.key, control], [reasoning.key, reasoning]]);
+  const flow = readerFlow({ key: 'turn:1', turn: 1, keys: [...nodes.keys()] }, turn, key => nodes.get(key));
+  assert.deepEqual(flow.map(item => item.kind === 'node' ? item.nodeKey : item.key), [reasoning.key]);
+  assert.equal(hasProcessContent(reasoning, active), true);
+});
+
 test('partial argument parsing respects JSON nesting, escapes and unfinished unicode', () => {
   const source = JSON.stringify({ file_path: '/work/真实.html', content: '"file_path":"fake"\n你好😀', nested: { file_path: 'also fake' } });
   for (let cut = source.indexOf('content') + 10; cut <= source.length; cut++) {

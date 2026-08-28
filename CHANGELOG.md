@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Exclude the alpha.1 synthetic `turn-process` disclosure controller from Reader transcript content.
+- Preserve real `assistant-step` reasoning on the original bounded reasoning-card path.
+- Add a regression test for alpha.1 process control ordering.
+
 ## 0.2.0
 
 - Adapted the reading view to DeepSeek Harness `0.1.2-alpha.1` and the split Chat/Conversation client APIs.

@@ -17,7 +17,7 @@ export function RetryCard({ attempts }: { attempts: readonly ModelRetryNode[] })
   return (
     <div className={css.retry} data-open={open || undefined}>
       <button type="button" className={css.retryHeader} aria-expanded={open} onClick={() => setOpen(value => !value)}>
-        <IconRefreshOutline14 className={css.retryIcon} />
+        <span className={css.retryGlyph}><IconRefreshOutline14 /></span>
         <span className={css.retryTitle}>模型重试记录</span>
         <span className={css.retryMeta}>{summary}</span>
         <IconChevronDownOutline14 className={css.retryChevron} />

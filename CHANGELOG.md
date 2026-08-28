@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Align the model-retry header with the tool rows: same 14px inset and 20px leading column, so the icon lines up with the tool icons above and below.
+- Let the disclosure chevron render as the plain filled glyph (removing the extra stroke that made it look too thick).
+
 ## 0.2.7
 
 - Render system-prompt records (inserted when switching models or resuming) as a collapsed "系统提示词" disclosure with the full prompt text, instead of the unsupported-record fallback.

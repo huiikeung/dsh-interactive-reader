@@ -228,18 +228,18 @@
 
 /* Structured model-retry disclosure, replacing the raw JSON fallback. */
 .retry { min-width: 0; }
-.retryHeader { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px 5px 0; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
+.retryHeader { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: start; gap: 10px; width: 100%; padding: 5px 14px 4px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
 .retryHeader:hover { background: var(--dsw-alias-interactive-bg-hover); }
 .retryHeader:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
-.retryIcon { flex: none; color: var(--dsw-alias-label-secondary); }
-.retryTitle { flex: none; font-weight: 500; font-size: 12px; line-height: 20px; color: var(--dsw-alias-label-secondary); }
-.retryMeta { flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
-.retryChevron { flex: none; stroke: currentColor; fill: none; stroke-width: 1.4; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
+.retryGlyph { display: flex; align-items: center; justify-content: center; height: 22px; color: var(--dsw-alias-label-secondary); }
+.retryTitle { min-width: 0; font-weight: 500; font-size: 12px; line-height: 20px; color: var(--dsw-alias-label-secondary); }
+.retryMeta { justify-self: end; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.retryChevron { flex: none; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
 .retry[data-open] .retryChevron { transform: rotate(180deg); }
-.retryBody { margin: 6px 0 0 6.5px; padding: 2px 0 0 20px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
+.retryBody { margin: 4px 0 0 24px; padding: 2px 0 0 20px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
 .retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
 .retryItem { position: relative; min-width: 0; }
-.retryItem::before { content: ''; position: absolute; left: -23px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
+.retryItem::before { content: ''; position: absolute; left: -22.5px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
 .retryItem + .retryItem { margin-top: 14px; }
 .retryItemHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .retryItemTag { padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary); }

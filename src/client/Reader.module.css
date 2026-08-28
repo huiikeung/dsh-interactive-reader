@@ -239,7 +239,7 @@
 .retryBody { margin: 4px 0 0 24px; padding: 2px 0 0 20px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
 .retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
 .retryItem { position: relative; min-width: 0; }
-.retryItem::before { content: ''; position: absolute; left: -22.5px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
+.retryItem::before { content: ''; position: absolute; left: -23.5px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
 .retryItem + .retryItem { margin-top: 14px; }
 .retryItemHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .retryItemTag { padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary); }

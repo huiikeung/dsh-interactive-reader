@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.9
+
+- Center the timeline dot precisely on the model-retry rule.
+
 ## 0.2.8
 
 - Align the model-retry header with the tool rows: same 14px inset and 20px leading column, so the icon lines up with the tool icons above and below.

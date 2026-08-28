@@ -1,11 +1,5 @@
 # Changelog
 
-## 0.2.2
-
-- Present each outer thought/process disclosure as a visible bordered card.
-- Keep process status, step count, and expansion control in one stable card header.
-- Preserve the existing bounded card for actual model reasoning blocks.
-
 ## 0.2.1
 
 - Exclude the alpha.1 synthetic `turn-process` disclosure controller from Reader transcript content.

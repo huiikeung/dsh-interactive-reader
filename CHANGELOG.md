@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.5
+
+- Match the model-retry title to the body type size.
+- Use a standard retry (refresh) icon in neutral gray.
+- Left-align the retry icon with the other flow-row icons.
+
 ## 0.2.4
 
 - Tune the model-retry card: neutral icon color, a different icon, and vertical rule alignment with the header.

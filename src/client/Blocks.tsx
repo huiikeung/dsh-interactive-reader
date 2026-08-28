@@ -1,11 +1,12 @@
 import { Component, Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
-import type { AssistantBlock, UserMessageNode } from '@deepseek-ai/dsh-client-runtime/client';
+import type { AssistantBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import { JsonBlock, MessageText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BlockRenderProps, ReaderBlockOwner } from './types.js';
 import { useStreamingText } from './streaming.js';
 import { MotionMarkdown, MotionPlainText } from './word-motion.js';
+import { truncatedJsonLabel } from './native-labels.js';
 import css from './Reader.module.css';
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
@@ -100,10 +101,10 @@ function fallback(block: AssistantBlock, streaming: boolean, source: ReaderBlock
     case 'text': return source === 'user' ? <MessageText text={block.text} /> : <ReadingMarkdown text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
     case 'image': return <ImageBlock attachment={block.attachment} loadImage={loadImage} />;
     case 'reasoning': return <ReadingReasoning text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
-    case 'tool-call': return <JsonBlock label={`工具参数 · ${block.name}`} payload={block.argsRaw} />;
+    case 'tool-call': return <JsonBlock label={`工具参数 · ${block.name}`} payload={block.argsRaw} truncatedLabel={truncatedJsonLabel} />;
     case 'other': return <div className={css.unknown}>
       <p>此内容类型尚未接入阅读页，原始内容已保留。</p>
-      <JsonBlock label="查看原始内容" payload={block.block} />
+      <JsonBlock label="查看原始内容" payload={block.block} truncatedLabel={truncatedJsonLabel} />
     </div>;
   }
 }

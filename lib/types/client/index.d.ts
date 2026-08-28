@@ -1,0 +1,6 @@
+import type { Context } from '@deepseek-ai/cordis';
+export type { ReaderBlockOwner } from './types.js';
+export declare const name = "dsh-better-display-client";
+export declare const inject: string[];
+export declare function apply(ctx: Context): void;
+//# sourceMappingURL=index.d.ts.map

@@ -1,5 +1,5 @@
-import type { AssistantBlock, ChatConversationViewNode, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-runtime/client';
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
+import type { AssistantBlock, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { ReaderGroup } from './projection.js';
 
 export type ToolDraft = Extract<AssistantBlock, { kind: 'tool-call' }>;
@@ -100,10 +100,9 @@ export function toolIdentity(entry: Pick<ToolActivityEntry, 'block' | 'draft'>) 
 
 export function executionFacts(block: ToolCallBlock | undefined): { exitCode?: number; signal?: string } {
   if (!block || !('kind' in block)) return {};
-  const result = block.resultView?.card === 'terminal' ? block.resultView : null;
   const meta = objectValue(block.meta);
-  const code = result?.exitCode ?? meta?.exitCode ?? meta?.exit_code;
-  return { exitCode: typeof code === 'number' && Number.isFinite(code) ? code : undefined, signal: result?.signal ?? stringValue(meta, 'signal') };
+  const code = meta?.exitCode ?? meta?.exit_code;
+  return { exitCode: typeof code === 'number' && Number.isFinite(code) ? code : undefined, signal: stringValue(meta, 'signal') };
 }
 
 export function activityPhase(entry: Pick<ToolActivityEntry, 'block' | 'draft'>, turnClosed = false): ToolPhase {
@@ -119,14 +118,13 @@ export function activityPhase(entry: Pick<ToolActivityEntry, 'block' | 'draft'>,
 export function activitySummary(entry: Pick<ToolActivityEntry, 'block' | 'draft'>) {
   const { name, raw } = toolIdentity(entry);
   const args = inputFields(raw);
-  const view = entry.block?.callView;
   const target = stringValue(args, 'file_path', 'path', 'filename', 'filePath');
-  const command = view?.card === 'terminal' ? view.title : stringValue(args, 'command', 'cmd', 'script');
-  const description = view?.card === 'terminal' ? view.description : stringValue(args, 'description');
+  const command = stringValue(args, 'command', 'cmd', 'script');
+  const description = stringValue(args, 'description');
   const file = target?.split(/[/\\]/).at(-1);
-  const category: ToolCategory = /^(write|edit|apply_patch|patch)$/.test(name) || view?.card === 'diff' ? 'write'
+  const category: ToolCategory = /^(write|edit|apply_patch|patch)$/.test(name) ? 'write'
     : /^(read|read_file)$/.test(name) ? 'read'
-    : /^(bash|shell|terminal|exec_command|pwsh)$/.test(name) || view?.card === 'terminal' ? 'terminal'
+    : /^(bash|shell|terminal|exec_command|pwsh)$/.test(name) ? 'terminal'
     : /^(grep|glob|find|search)$/.test(name) ? 'search'
     : /^(web_search|web_fetch|web_open)$/.test(name) ? 'web' : 'other';
   const title = category === 'write' ? `${name === 'write' ? '写入' : '修改'}${file ? ` ${file}` : name === 'apply_patch' ? '代码补丁' : '文件'}`
@@ -134,9 +132,9 @@ export function activitySummary(entry: Pick<ToolActivityEntry, 'block' | 'draft'
     : category === 'terminal' ? description || '运行命令'
     : category === 'search' ? name === 'glob' ? '查找文件' : '搜索内容'
     : category === 'web' ? name === 'web_search' ? '搜索网页' : '读取网页'
-    : view?.title || name;
+    : name;
   return { name, raw, args, category, title, target: target ?? command ?? stringValue(args, 'query', 'pattern', 'url'), command,
-    cwd: view?.card === 'terminal' ? view.cwd : stringValue(args, 'workdir', 'cwd'), content: stringValue(args, 'content', 'new_string', 'newText') };
+    cwd: stringValue(args, 'workdir', 'cwd'), content: stringValue(args, 'content', 'new_string', 'newText') };
 }
 
 export function preparingLabel(name: string): string {

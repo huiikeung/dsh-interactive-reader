@@ -1,5 +1,5 @@
 import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
-import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-runtime/client';
+import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlock, WebBlock,
   IconApiOutline14, IconBrowseOutline16, IconEditOutline16, IconSearchOutline16, IconSkillOutline16, IconSparkle16 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Blocks, contentBlocks } from './Blocks.js';
@@ -8,6 +8,7 @@ import { activityPhase, activitySummary, executionFacts, toolIdentity } from './
 import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity.js';
 import type { BlockRenderProps } from './types.js';
 import { classifyTool, toolRowModel, VARIANT_TITLES } from './native/tool-call-model.js';
+import { jsonTreeLabels, readBlockLabels, terminalBlockLabels } from './native-labels.js';
 import css from './Reader.module.css';
 
 const LABEL: Record<ToolPhase, string> = { preparing: '输入生成中', running: '执行中', returned: '已返回', succeeded: '已完成', failed: '失败', interrupted: '已中断' };
@@ -20,14 +21,14 @@ function generatedInput(content: string, target: string | undefined, preparing: 
   const lines = content.split('\n').map((text, index) => ({ number: index + 1, text }));
   const visible = preparing ? lines.slice(-12) : lines.slice(0, 1600);
   return <div data-reader-tool-file><p className={css.toolDetailNote}>{preparing ? '正在生成的输入 · 尚未执行 · 末尾 12 行' : '工具输入中的文件内容'}{!preparing && lines.length > visible.length ? ' · 预览前 1,600 行，完整内容在原始数据中' : ''}</p>
-    <ReadBlock label={target ?? '文件内容'} lang={language(target)} lines={visible} totalLines={lines.length} maxLines={16} />
+    <ReadBlock label={target ?? '文件内容'} lang={language(target)} lines={visible} totalLines={lines.length} maxLines={16} labels={readBlockLabels} />
   </div>;
 }
 
 function InputView({ model, preparing }: { model: ReturnType<typeof activitySummary>; preparing: boolean }) {
   if (model.content) return generatedInput(model.content, model.target, preparing);
-  if (model.command) return <div data-reader-tool-terminal><p className={css.toolDetailNote}>{preparing ? '正在生成命令 · 尚未执行' : '提交的命令'}</p><TerminalBlock command={model.command} cwd={model.cwd} /></div>;
-  return <JsonTree data={model.args} label={preparing ? '已收到的输入字段' : '工具输入'} />;
+  if (model.command) return <div data-reader-tool-terminal><p className={css.toolDetailNote}>{preparing ? '正在生成命令 · 尚未执行' : '提交的命令'}</p><TerminalBlock command={model.command} cwd={model.cwd} labels={terminalBlockLabels} /></div>;
+  return <JsonTree data={model.args} label={preparing ? '已收到的输入字段' : '工具输入'} labels={jsonTreeLabels} />;
 }
 
 function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
@@ -36,28 +37,20 @@ function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { ent
     <p className={css.toolDetailNote}>{phase === 'interrupted' ? '已中断，没有工具结果。已生成的输入仍可查看。' : phase === 'preparing' ? '模型正在生成工具输入，工具还未开始执行。' : '工具已开始执行，正在等待结果。'}</p>
     <InputView model={model} preparing={phase === 'preparing'} />
   </>;
-  const view = block.resultView;
   const text = block.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
-  if (view?.card === 'terminal' || model.category === 'terminal') {
+  if (model.category === 'terminal') {
     const facts = executionFacts(block);
-    return <div data-reader-tool-terminal><TerminalBlock command={model.command ?? view?.title ?? model.name} cwd={model.cwd}
-      output={view?.card === 'terminal' ? view.output ?? text : text} exitCode={facts.exitCode} signal={facts.signal} maxLines={18} /></div>;
+    return <div data-reader-tool-terminal><TerminalBlock command={model.command ?? model.name} cwd={model.cwd}
+      output={text} exitCode={facts.exitCode} signal={facts.signal} maxLines={18} labels={terminalBlockLabels} /></div>;
   }
-  if (view?.card === 'read') return <div data-reader-tool-file><ReadBlock label={view.path} lang={view.lang} lines={view.lines} totalLines={view.totalLines} maxLines={18} /></div>;
-  if (view?.card === 'diff' && view.diffs.length) return <div data-reader-tool-diff><DiffBlock diffs={view.diffs} maxLines={18} /></div>;
-  if (view?.card === 'search') return <div data-reader-tool-search>{view.shape === 'paths'
-    ? <SearchBlock kind="paths" paths={view.paths} total={view.total} truncated={view.truncated} maxLines={18} />
-    : <SearchBlock kind="matches" files={view.files} total={view.total} truncated={view.truncated} maxLines={18} />}</div>;
-  if (view?.card === 'web') return <div data-reader-tool-web>{view.kind === 'search'
-    ? <WebBlock kind="search" sources={view.sources} answer={view.answer} truncated={view.truncated} />
-    : <WebBlock kind="fetch" url={view.url} statusCode={view.statusCode} truncated={view.truncated} />}</div>;
-  // A trace/export may omit wire presentation. Keep the generated input clearly
-  // labelled; it is not proof of an applied diff or a successful file mutation.
+  // Alpha.1 removed the host-computed resultView/callView presentation. Keep
+  // submitted file content visible while deriving all result truth from the
+  // durable content/meta fields below.
   if (model.category === 'write' && model.content && !block.isError) return <>
     <p className={css.toolDetailNote}>文件工具已返回。以下为提交的内容；完整返回记录可在「原始数据」查看。</p>
     {generatedInput(model.content, model.target, false)}
   </>;
-  const content: ToolResultNode['content'] = view?.card === 'generic' && view.content ? view.content : block.content;
+  const content: ToolResultNode['content'] = block.content;
   if (content.some(item => item.type === 'text')) return <div className={css.toolDocument}><Blocks {...render} blocks={contentBlocks(content).filter(item => item.kind === 'text')} source="tool" /></div>;
   if (content.length) return <p className={css.toolDetailNote}>图片或扩展内容已在对话中单独展示。</p>;
   return <p className={css.toolDetailNote}>工具没有返回可展示的内容。</p>;
@@ -99,7 +92,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   const elapsed = block && 'kind' in block && block.callTime != null ? Math.max(0, block.time - block.callTime) : null;
   const rawResult = useMemo(() => {
     const value = preview.entry.block;
-    return value && 'kind' in value ? JSON.stringify({ content: value.content, isError: value.isError, meta: value.meta, resultView: value.resultView }, null, 2) : '';
+    return value && 'kind' in value ? JSON.stringify({ content: value.content, isError: value.isError, meta: value.meta }, null, 2) : '';
   }, [preview.entry.block]);
   const tabs = [['result', phase === 'preparing' ? '生成预览' : '结果'], ['input', '输入'], ['raw', '原始数据']] as const;
   const activate = (index: number) => { const item = tabs[(index + tabs.length) % tabs.length]!; setTab(item[0]); tabRefs.current[(index + tabs.length) % tabs.length]?.focus(); };
@@ -125,7 +118,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
         <div ref={panel} id={`${detailId}-panel`} className={css.toolPanel} role="tabpanel" aria-labelledby={`${detailId}-${tab}`} tabIndex={0}>
           {selected && <p className={css.toolDetailNote}>为保留选区，预览暂停更新；当前状态见卡片标题。</p>}
           {tab === 'result' && <ResultView {...render} {...preview} />}
-          {tab === 'input' && <><InputView model={preview.model} preparing={preview.phase === 'preparing'} /><details className={css.detail}><summary>全部输入字段</summary><JsonTree data={preview.model.args} label="输入字段" /></details></>}
+          {tab === 'input' && <><InputView model={preview.model} preparing={preview.phase === 'preparing'} /><details className={css.detail}><summary>全部输入字段</summary><JsonTree data={preview.model.args} label="输入字段" labels={jsonTreeLabels} /></details></>}
           {tab === 'raw' && <><p className={css.toolDetailNote}>完整记录 · 只读 · 不执行其中的代码</p><h4 className={css.toolRawLabel}>工具输入</h4><pre className={css.toolRaw}>{preview.model.raw || '输入尚未到达'}</pre>{rawResult && <><h4 className={css.toolRawLabel}>工具结果</h4><pre className={css.toolRaw}>{rawResult}</pre></>}</>}
         </div>
       </div>

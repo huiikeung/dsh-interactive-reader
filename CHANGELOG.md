@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+
+- Adapted the reading view to DeepSeek Harness `0.1.2-alpha.1` and the split Chat/Conversation client APIs.
+- Replaced removed `resultView` and `callView` fields with durable tool content, metadata, and arguments.
+- Added localized labels required by the alpha.1 UI primitives.
+- Added a standard `dsh.bundle.patch` for installation through `dsh plugin --profile web add`.
+- Added a standalone external Web client build adapter.
+- Included prebuilt `lib/` artifacts for direct Git and registry installation.
+
 ## 0.1.0
 
 First public release of the accepted reading-view plugin, published as `dsh-better-display`.

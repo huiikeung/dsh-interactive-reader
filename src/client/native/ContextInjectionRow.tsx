@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { ContextMessageNode } from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-chat/client'
+import type { ContextMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import { DisclosureRow, IconBrowseOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ReferenceIcon } from './ReferenceIcon.js'
 import { contextBody } from './ContextBody.js'

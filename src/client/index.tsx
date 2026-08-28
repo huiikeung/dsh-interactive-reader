@@ -1,6 +1,9 @@
 import type { Context } from '@deepseek-ai/cordis';
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client';
+import type { SessionId } from '@deepseek-ai/dsh-session/types';
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client';
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
+import type {} from '@deepseek-ai/dsh-client-ui-session/client';
 import { Reader } from './Reader.js';
 import { createReaderStore } from './store.js';
 import { installReaderEntry } from './entry.js';
@@ -20,7 +23,7 @@ export function apply(ctx: Context): void {
     id: 'reader',
     order: -5,
     label: () => '阅读',
-    locale: 'conversation',
+    locale: 'chat',
     children: { 'dsh-better-display.block': { kind: 'chain', scope: 'session' } },
     store,
     inject: (sessionId: SessionId): ReaderInjected => {

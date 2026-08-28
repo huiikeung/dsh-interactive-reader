@@ -224,3 +224,24 @@
 @media (prefers-reduced-motion: reduce) { .chevron, .imageOpen img, .processMeta { transition: none; } }
 @media (pointer: coarse) { .disclosureButton { min-height: 44px; } }
 @media (max-width: 600px) { .root { padding-inline: 20px; } .column { gap: 18px; } .toolbar { font-size: 11px; } .user { max-width: 90%; } }
+
+/* Structured model-retry disclosure, replacing the raw JSON fallback. */
+.retry { min-width: 0; }
+.retryHeader { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; text-align: left; cursor: pointer; }
+.retryHeader:hover { background: var(--dsw-alias-interactive-bg-hover); }
+.retryHeader:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 2px; }
+.retryIcon { flex: none; color: var(--dsw-alias-state-warn-primary); }
+.retryTitle { flex: none; font-weight: 500; color: var(--dsw-alias-label-secondary); }
+.retryMeta { flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.retryChevron { flex: none; stroke: currentColor; fill: none; stroke-width: 1.4; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
+.retry[data-open] .retryChevron { transform: rotate(180deg); }
+.retryBody { margin: 4px 0 0 6px; padding: 10px 0 0 12px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
+.retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
+.retryItem { min-width: 0; }
+.retryItem + .retryItem { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--dsw-alias-border-l1); }
+.retryItemHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
+.retryItemTag { padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary); }
+.retryItemDelay { color: var(--dsw-alias-label-tertiary); }
+.retryItemState { color: var(--dsw-alias-label-tertiary); }
+.retryItemFailure { display: flex; align-items: baseline; gap: 8px; margin-top: 3px; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-secondary); overflow-wrap: anywhere; white-space: pre-wrap; }
+.retryItemCode { flex: none; padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-state-error-tertiary); color: var(--dsw-alias-state-error-primary); font-size: 11px; line-height: 18px; font-variant-numeric: tabular-nums; }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+
+- Replace the model-retry node's raw JSON block with a structured RetryCard.
+- Show a refresh icon, attempt count, and per-attempt delay/state/failure lines instead of the default chevron and JSON tree.
+
 ## 0.2.2
 
 - Show the bordered reasoning card as soon as reasoning appears, instead of only after the text exceeds the preview height.

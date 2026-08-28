@@ -143,9 +143,6 @@
   scroll-margin-block: 16px calc(var(--dsh-composer-height, 152px) + 16px);
 }
 .reasonHeading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 16px 0; color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
-.reasonCard[data-overflow=false][data-expanded=false] { border-color: transparent; border-radius: 0; background: transparent; }
-.reasonCard[data-overflow=false][data-expanded=false] .reasonHeading { padding: 0; }
-.reasonCard[data-overflow=false][data-expanded=false] .reasonText { padding: 4px 0 0 22px; }
 .reasonLabel { font-weight: 500; }
 .reasonViewport {
   position: relative;

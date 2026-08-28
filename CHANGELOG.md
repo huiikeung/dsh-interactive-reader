@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Show the bordered reasoning card as soon as reasoning appears, instead of only after the text exceeds the preview height.
+- Short reasoning now keeps the card frame, background, and rounded corners.
+
 ## 0.2.1
 
 - Exclude the alpha.1 synthetic `turn-process` disclosure controller from Reader transcript content.

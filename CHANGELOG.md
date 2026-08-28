@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6
+
+- Run the model-retry vertical rule through the header icon's center and draw a timeline dot for each attempt, replacing the dashed separators.
+
 ## 0.2.5
 
 - Match the model-retry title to the body type size.

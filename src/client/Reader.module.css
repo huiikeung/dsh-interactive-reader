@@ -235,10 +235,11 @@
 .retryMeta { flex: 1 1 auto; min-width: 0; overflow: hidden; text-align: right; color: var(--dsw-alias-label-tertiary); font-size: 12px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
 .retryChevron { flex: none; stroke: currentColor; fill: none; stroke-width: 1.4; color: var(--dsw-alias-label-tertiary); transition: transform 200ms ease; }
 .retry[data-open] .retryChevron { transform: rotate(180deg); }
-.retryBody { margin: 4px 0 0 0; padding: 10px 0 0 22px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
+.retryBody { margin: 6px 0 0 6.5px; padding: 2px 0 0 20px; border-left: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); }
 .retryEmpty { margin: 0; font-size: 13px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
-.retryItem { min-width: 0; }
-.retryItem + .retryItem { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--dsw-alias-border-l1); }
+.retryItem { position: relative; min-width: 0; }
+.retryItem::before { content: ''; position: absolute; left: -23px; top: 7px; width: 5px; height: 5px; border-radius: 50%; background: var(--dsw-alias-label-caption); }
+.retryItem + .retryItem { margin-top: 14px; }
 .retryItemHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; font-size: 12px; line-height: 20px; font-variant-numeric: tabular-nums; }
 .retryItemTag { padding: 0 6px; border-radius: 4px; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-tertiary); }
 .retryItemDelay { color: var(--dsw-alias-label-tertiary); }

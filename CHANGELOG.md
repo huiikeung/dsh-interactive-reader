@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+- Restore the original transparent collapsed thought/process title.
+- Place only expanded process content inside one bordered card.
+- Keep final answers and tool media outside the expanded process card.
+
 ## 0.2.2
 
 - Present each outer thought/process disclosure as a visible bordered card.

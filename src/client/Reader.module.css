@@ -189,6 +189,7 @@
 .detail { font-size: 13px; line-height: 22px; color: var(--dsw-alias-label-secondary); }
 .detail > summary { cursor: pointer; padding: 3px 0; }
 .detail[open] > summary { margin-bottom: 8px; }
+.promptText { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--dsw-alias-markdown-code-block); color: var(--dsw-alias-label-secondary); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-size: 12px; line-height: 20px; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
 .tool > .tool { margin: 10px 0 0 12px; }
 .meta { font-size: 12px; line-height: 20px; color: var(--dsw-alias-label-tertiary); }
 .stopped { align-self: flex-start; border-radius: 6px; padding: 0 6px; background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 18px; margin-top: 12px; }

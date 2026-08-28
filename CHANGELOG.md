@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.7
+
+- Render system-prompt records (inserted when switching models or resuming) as a collapsed "系统提示词" disclosure with the full prompt text, instead of the unsupported-record fallback.
+
 ## 0.2.6
 
 - Run the model-retry vertical rule through the header icon's center and draw a timeline dot for each attempt, replacing the dashed separators.

@@ -6,11 +6,10 @@ export declare function StatusText({ text, motion, shimmer }: {
     motion: boolean;
     shimmer?: boolean;
 }): import("react").JSX.Element;
-export declare function Disclosure({ open, onChange, label, status, controls, buttonRef, children }: {
+export declare function Disclosure({ open, onChange, label, status, controls, buttonRef }: {
     open: boolean;
     onChange: (value: boolean) => void;
     label: ReactNode;
-    children: ReactNode;
     status?: string;
     controls: string;
     buttonRef: RefObject<HTMLButtonElement>;

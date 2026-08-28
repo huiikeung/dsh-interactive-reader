@@ -87,8 +87,8 @@ export function StatusText({ text, motion, shimmer = false }: { text: string; mo
   </span>;
 }
 
-export function Disclosure({ open, onChange, label, status, controls, buttonRef, children }: {
-  open: boolean; onChange: (value: boolean) => void; label: ReactNode; children: ReactNode;
+export function Disclosure({ open, onChange, label, status, controls, buttonRef }: {
+  open: boolean; onChange: (value: boolean) => void; label: ReactNode;
   status?: string; controls: string; buttonRef: RefObject<HTMLButtonElement>;
 }) {
   return <div className={css.disclosure} data-reader-disclosure data-expanded={open}>
@@ -101,7 +101,6 @@ export function Disclosure({ open, onChange, label, status, controls, buttonRef,
         <span>思考与过程</span>{status && <span className={css.meta}>{status}</span>}
       </div></div>
     </div>
-    <div id={controls} className={css.processCardBody} data-reader-process-card-body>{children}</div>
   </div>;
 }
 

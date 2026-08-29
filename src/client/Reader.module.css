@@ -222,7 +222,7 @@
 .imageDialog::backdrop { background: var(--dsw-alias-bg-mask-photo); }
 .imageDialog img { max-width: 82vw; max-height: 75vh; display: block; object-fit: contain; }
 .dialogClose { position: absolute; right: 8px; top: 4px; border: 0; background: transparent; color: inherit; width: 32px; height: 32px; border-radius: 8px; font-size: 24px; }
-.jumpDock { position: fixed; bottom: calc(var(--dsh-composer-height, 152px) + 16px); right: 16px; z-index: 30; }
+.jumpDock { position: sticky; bottom: 16px; align-self: flex-end; z-index: 30; }
 .jump { border: 1px solid var(--dsw-alias-border-l2); border-radius: 20px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 20px; padding: 7px 13px; box-shadow: 0 2px 8px var(--dsw-alias-border-l1); }
 [data-motion=off] .chevron, [data-motion=off] .imageOpen img, [data-motion=off] .processMeta { transition: none; }
 @media (prefers-reduced-motion: reduce) { .chevron, .imageOpen img, .processMeta { transition: none; } }

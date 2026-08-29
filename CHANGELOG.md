@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- Let reasoning-card text follow the DSH content-font axis (same as the answer body and the chat), so thinking and answer always share one size instead of reasoning being pinned to 14px.
+
 ## 0.3.3
 
 - Drive the reading view's base font from the DSH content-font axis (`--dsh-content-font-size` / `--dsh-content-font-delta`) instead of a hardcoded 16px, so text matches the chat summary and scales with the theme/mobile settings.

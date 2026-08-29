@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.6
+
+- Restore the "回到最新" button to only appear when scrolled away from the latest (undo the always-visible change).
+
 ## 0.3.5
 
 - Always show the reading view's "回到最新" (jump-to-bottom) button instead of only when scrolled away from the latest.

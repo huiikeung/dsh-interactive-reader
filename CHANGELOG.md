@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.8
+
+- Pin the "回到最新" button to the viewport (fixed, above the composer) so it stays visible while scrolling instead of drifting with the content and getting clipped.
+
 ## 0.3.7
 
 - Latch the "回到最新" button: show once the user leaves the bottom and keep it until they truly return, so a near-threshold scroll no longer flashes it on and off.

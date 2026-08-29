@@ -204,8 +204,12 @@ export function useReadingScroll(root: RefObject<HTMLElement>, motion: boolean):
     const onScroll = () => {
       // Our easing frames must not be mistaken for a user leaving the bottom.
       if (lastWrittenTop !== null && Math.abs(scroll.scrollTop - lastWrittenTop) < 1) return;
-      following.current = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 72;
-      setDetached(!following.current);
+      const gap = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight;
+      following.current = gap < 72;
+      // Latch the "back to latest" affordance: show once the user leaves the
+      // bottom, hide only when they are genuinely pinned to it; stay put in the
+      // middle band so a single near-threshold scroll cannot flash it on/off.
+      setDetached(previous => gap >= 72 ? true : gap < 8 ? false : previous);
       if (!following.current) { cancelAnimationFrame(followFrame); followFrame = 0; }
       capture();
     };

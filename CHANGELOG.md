@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.7
+
+- Latch the "回到最新" button: show once the user leaves the bottom and keep it until they truly return, so a near-threshold scroll no longer flashes it on and off.
+
 ## 0.3.6
 
 - Restore the "回到最新" button to only appear when scrolled away from the latest (undo the always-visible change).

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.9
+
+- Align the "回到最新" button to the content/composer column's right edge (sticky, bottom-right of the column) instead of the viewport edge.
+
 ## 0.3.8
 
 - Pin the "回到最新" button to the viewport (fixed, above the composer) so it stays visible while scrolling instead of drifting with the content and getting clipped.

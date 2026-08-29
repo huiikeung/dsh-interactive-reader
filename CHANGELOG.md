@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.5
+
+- Always show the reading view's "回到最新" (jump-to-bottom) button instead of only when scrolled away from the latest.
+
 ## 0.3.4
 
 - Let reasoning-card text follow the DSH content-font axis (same as the answer body and the chat), so thinking and answer always share one size instead of reasoning being pinned to 14px.

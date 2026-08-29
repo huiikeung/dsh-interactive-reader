@@ -9,7 +9,7 @@ export declare const ToolActivity: import("react").MemoExoticComponent<({ entry,
     onRead: () => void;
     depth?: number;
 }) => import("react").JSX.Element>;
-/** Media and failures never disappear inside a folded execution record. */
+/** Only genuine media (images) stays in the flow; failures surface inside the folded tool record. */
 export declare function ToolMedia({ block, depth, ...render }: BlockRenderProps & {
     block: ToolCallBlock;
     depth?: number;

@@ -4,7 +4,7 @@ import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlo
   IconApiOutline14, IconBrowseOutline16, IconEditOutline16, IconSearchOutline16, IconSkillOutline16, IconSparkle16 } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Blocks, contentBlocks } from './Blocks.js';
 import { ProcessFragment } from './motion.js';
-import { activityPhase, activitySummary, executionFacts, toolIdentity } from './tool-activity.js';
+import { activityPhase, activitySummary, executionFacts } from './tool-activity.js';
 import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity.js';
 import type { BlockRenderProps } from './types.js';
 import { classifyTool, toolRowModel, VARIANT_TITLES } from './native/tool-call-model.js';
@@ -132,14 +132,12 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   && previous.motion === next.motion && previous.turnClosed === next.turnClosed && previous.depth === next.depth
   && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage);
 
-/** Media and failures never disappear inside a folded execution record. */
+/** Only genuine media (images) stays in the flow; failures surface inside the folded tool record. */
 export function ToolMedia({ block, depth = 0, ...render }: BlockRenderProps & { block: ToolCallBlock; depth?: number }) {
   if (depth > 6) return null;
   const settled = 'kind' in block;
-  const failed = activityPhase({ block }) === 'failed';
-  const visible = settled ? contentBlocks(block.content).filter(item => block.isError || item.kind === 'image' || item.kind === 'other') : [];
+  const visible = settled ? contentBlocks(block.content).filter(item => !block.isError && (item.kind === 'image' || item.kind === 'other')) : [];
   return <>
-    {failed && <div className={css.error} role="alert">{toolIdentity({ block }).name} 执行未成功{executionFacts(block).exitCode !== undefined ? ` · 退出码 ${executionFacts(block).exitCode}` : ''}，详情保留在执行记录中。</div>}
     {visible.length > 0 && <Blocks {...render} blocks={visible} source="tool" />}
     {block.subCalls.map(child => <ToolMedia key={child.callId} {...render} block={child} depth={depth + 1} />)}
   </>;

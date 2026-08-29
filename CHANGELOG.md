@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Fold failed-tool notices (e.g. write/edit errors) into the tool's execution record instead of showing a loud banner in the main flow.
+
 ## 0.3.1
 
 - Shrink the system-prompt disclosure triangle to a smaller chevron.

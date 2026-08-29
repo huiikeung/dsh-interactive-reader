@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.11
+
+- Float the "回到最新" button above the composer (sticky bottom offset by `--dsh-composer-height`) aligned to the content column's right edge, like DSH's own to-bottom control.
+
 ## 0.3.10
 
 - Nudge the "回到最新" button 15px so its right edge lines up with the composer row's right edge (the composer is 15px wider than the text column).

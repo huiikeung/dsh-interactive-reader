@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12
+
+- Keep the "回到最新" pill at its natural height in the float slot and nudge it flush with the composer's right edge.
+
 ## 0.3.11
 
 - Float the "回到最新" button above the composer (sticky bottom offset by `--dsh-composer-height`) aligned to the content column's right edge, like DSH's own to-bottom control.

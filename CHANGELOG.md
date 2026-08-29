@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.10
+
+- Nudge the "回到最新" button 15px so its right edge lines up with the composer row's right edge (the composer is 15px wider than the text column).
+
 ## 0.3.9
 
 - Align the "回到最新" button to the content/composer column's right edge (sticky, bottom-right of the column) instead of the viewport edge.

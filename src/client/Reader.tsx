@@ -2,7 +2,7 @@ import { Fragment, memo, useCallback, useId, useMemo, useRef, useState } from 'r
 import type { ReactNode, RefObject } from 'react';
 import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
-import { BlockBoundary, Blocks, contentBlocks, CopyAnswer } from './Blocks.js';
+import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageCopy } from './Blocks.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
@@ -63,10 +63,14 @@ const AssistantNode = memo(function AssistantNode({ useChat, nodeKey, boundary, 
 const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, processOpen = false, ...render }: SeatProps) {
   const node = useChat(snapshot => snapshot.nodes.get(nodeKey));
   if (!node || node.visibility === 'hidden') return null;
-  if (isNode(node, 'user') || isNode(node, 'steering')) return <div className={css.user} data-reader-anchor data-reader-key={nodeKey}>
-    {node.kind === 'steering' && <p className={css.meta}>补充消息</p>}
-    <Blocks {...render} blocks={contentBlocks(node.data.content)} source="user" />
-  </div>;
+  if (isNode(node, 'user') || isNode(node, 'steering')) {
+    const userBlocks = contentBlocks(node.data.content);
+    return <div className={css.userGroup} data-reader-anchor data-reader-key={nodeKey}>
+      {node.kind === 'steering' && <p className={css.meta}>补充消息</p>}
+      <div className={css.user}><Blocks {...render} blocks={userBlocks} source="user" /></div>
+      <UserMessageCopy time={node.data.time} blocks={userBlocks} />
+    </div>;
+  }
   if (isNode(node, 'assistant-step')) return null;
   if (isNode(node, 'tool-call')) return <ToolMedia {...render} block={node.data.root} />;
   if (isNode(node, 'turn-error')) return <div className={css.error} role="alert" data-reader-anchor>
@@ -184,7 +188,7 @@ export function Reader(props: ReaderProps) {
   const pinnedKeys = usePinnedSelection(root);
   const selectedProcessKeys = usePinnedSelection(root, '[data-reader-process]');
   const [historyError, setHistoryError] = useState(false);
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.12" data-motion={motion ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.13" data-motion={motion ? 'on' : 'off'}>
     <div className={css.column}>
       <div className={css.toolbar} data-ud-check="reader-toolbar">
         <span title="基于真实消息类型和轮次边界整理。当前协议没有独立的正文阶段标记，无法确认的内容会继续保留。">阅读 · 原始记录完整保留</span>

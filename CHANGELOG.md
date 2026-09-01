@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.13
+
+- Add a copy action (with the message clock) under each user message in the reading view, matching the native chat's clock+copy row.
+
 ## 0.3.12
 
 - Keep the "回到最新" pill at its natural height in the float slot and nudge it flush with the composer's right edge.

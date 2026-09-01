@@ -2,7 +2,7 @@ import { Component, Fragment, memo, useEffect, useLayoutEffect, useRef, useState
 import type { ReactNode } from 'react';
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import type { AssistantBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import { JsonBlock, MessageText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives';
+import { IconCheckOutline16, IconCopyOutline16, JsonBlock, MessageText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BlockRenderProps, ReaderBlockOwner } from './types.js';
 import { useStreamingText } from './streaming.js';
 import { MotionMarkdown, MotionPlainText } from './word-motion.js';
@@ -135,5 +135,30 @@ export function CopyAnswer({ blocks }: { blocks: readonly AssistantBlock[] }) {
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5" /><path d="M3 10H2.8A.8.8 0 0 1 2 9.2V2.8a.8.8 0 0 1 .8-.8h6.4a.8.8 0 0 1 .8.8V3" /></svg>
     </button>
     <span role="status" className={css.meta}>{receipt}</span>
+  </div>;
+}
+
+/** Copy action for a user message, matching the native chat's clock+copy row. */
+export function UserMessageCopy({ blocks, time }: { blocks: readonly AssistantBlock[]; time?: number }) {
+  const [copied, setCopied] = useState(false);
+  const pending = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const text = blocks.filter((block): block is Extract<AssistantBlock, { kind: 'text' }> => block.kind === 'text').map(block => block.text).join('\n');
+  if (!text.trim()) return null;
+  const onCopy = async () => {
+    if (copied || pending.current) return;
+    pending.current = true;
+    const ok = await writeClipboard(text);
+    pending.current = false;
+    if (!ok) return;
+    setCopied(true);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCopied(false), 1000);
+  };
+  const timeText = typeof time === 'number' ? new Date(time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) : null;
+  return <div className={css.userActions}>
+    {timeText && <span className={css.userTime}>{timeText}</span>}
+    <button type="button" className={css.userCopy} aria-label={copied ? '已复制' : '复制'} title={copied ? '已复制' : '复制'} onClick={onCopy}>{copied ? <IconCheckOutline16 /> : <IconCopyOutline16 />}</button>
   </div>;
 }

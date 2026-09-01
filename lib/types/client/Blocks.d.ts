@@ -35,5 +35,10 @@ export declare const Blocks: import("react").MemoExoticComponent<({ blocks, stre
 export declare function CopyAnswer({ blocks }: {
     blocks: readonly AssistantBlock[];
 }): import("react").JSX.Element | null;
+/** Copy action for a user message, matching the native chat's clock+copy row. */
+export declare function UserMessageCopy({ blocks, time }: {
+    blocks: readonly AssistantBlock[];
+    time?: number;
+}): import("react").JSX.Element | null;
 export {};
 //# sourceMappingURL=Blocks.d.ts.map

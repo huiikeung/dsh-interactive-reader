@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.14
+
+- Add the reading view's right-side turn rail: preview and jump to / load all paginated Turns, mirroring the native chat's TurnNavigator.
+
 ## 0.3.13
 
 - Add a copy action (with the message clock) under each user message in the reading view, matching the native chat's clock+copy row.

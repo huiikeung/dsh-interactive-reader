@@ -10,6 +10,7 @@ import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllo
 import { StreamMotionContext } from './streaming.js';
 import { assistantSegments, boundaryOf, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
 import { RetryItem } from './RetryItem.js';
+import { TurnRail, type TurnRailItem } from './TurnRail.js';
 import { ContextInjectionRow } from './native/ContextInjectionRow.js';
 import type { ReaderGroup, TurnBoundary } from './projection.js';
 import type { BlockRenderProps, ReaderProps } from './types.js';
@@ -188,7 +189,26 @@ export function Reader(props: ReaderProps) {
   const pinnedKeys = usePinnedSelection(root);
   const selectedProcessKeys = usePinnedSelection(root, '[data-reader-process]');
   const [historyError, setHistoryError] = useState(false);
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.13" data-motion={motion ? 'on' : 'off'}>
+  const turnItems = props.useChat(snapshot => snapshot.navigation.items()) as TurnRailItem[];
+  const [activeTurn, setActiveTurn] = useState<number | null>(null);
+  const navigateTurn = useCallback((item: TurnRailItem) => {
+    const cc = root.current?.closest<HTMLElement>('[data-conversation-scroll]') ?? null;
+    if (!cc) return;
+    const scrollTo = (key: string) => {
+      const row = cc.querySelector<HTMLElement>(`[data-reader-key="${CSS.escape(key)}"]`);
+      if (row) {
+        const top = row.getBoundingClientRect().top - cc.getBoundingClientRect().top + cc.scrollTop;
+        cc.scrollTop = Math.max(0, top - 24);
+        setActiveTurn(item.turn);
+      }
+    };
+    scrollTo(item.anchorKey);
+    if (cc.querySelector(`[data-reader-key="${CSS.escape(item.anchorKey)}"]`) === null) {
+      void props.loadOlder().then(() => scrollTo(item.anchorKey));
+    }
+  }, [root, props.loadOlder]);
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.14" data-motion={motion ? 'on' : 'off'}>
+    <TurnRail items={turnItems} activeTurn={activeTurn} onNavigate={navigateTurn} />
     <div className={css.column}>
       <div className={css.toolbar} data-ud-check="reader-toolbar">
         <span title="基于真实消息类型和轮次边界整理。当前协议没有独立的正文阶段标记，无法确认的内容会继续保留。">阅读 · 原始记录完整保留</span>

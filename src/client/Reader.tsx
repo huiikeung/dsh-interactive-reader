@@ -2,13 +2,13 @@ import { Fragment, memo, useCallback, useId, useMemo, useRef, useState } from 'r
 import type { ReactNode, RefObject } from 'react';
 import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
-import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageCopy } from './Blocks.js';
+import { BlockBoundary, Blocks, CopyAnswer, FileCard, ImageBlock, UserMessageCopy, UserText } from './Blocks.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
-import { assistantSegments, boundaryOf, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
+import { assistantSegments, boundaryOf, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, splitUserContent, terminalLabel } from './projection.js';
 import { RetryItem } from './RetryItem.js';
 import { TurnRail, type TurnRailItem } from './TurnRail.js';
 import { ContextInjectionRow } from './native/ContextInjectionRow.js';
@@ -65,11 +65,22 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   const node = useChat(snapshot => snapshot.nodes.get(nodeKey));
   if (!node || node.visibility === 'hidden') return null;
   if (isNode(node, 'user') || isNode(node, 'steering')) {
-    const userBlocks = contentBlocks(node.data.content);
+    const data = node.data;
+    const parts = splitUserContent(data.content);
+    const attached = parts.images.length + parts.files.length;
     return <div className={css.userGroup} data-reader-anchor data-reader-key={nodeKey}>
       {node.kind === 'steering' && <p className={css.meta}>补充消息</p>}
-      <div className={css.user}><Blocks {...render} blocks={userBlocks} source="user" /></div>
-      <UserMessageCopy time={node.data.time} blocks={userBlocks} />
+      {attached > 0 && <div className={css.userAttachments} data-reader-attachments>
+        {parts.images.map(image => <BlockBoundary key={`image:${image.attachmentId}`}><ImageBlock attachment={image} loadImage={render.loadImage} compact={attached > 1} /></BlockBoundary>)}
+        {parts.files.map(file => <BlockBoundary key={`file:${file.attachmentId}`}><FileCard attachment={file} /></BlockBoundary>)}
+      </div>}
+      {(parts.text !== '' || parts.rest.length > 0) && <div className={css.user}>
+        <UserText text={parts.text} sessionLabels={data.referenceLabels} slashNames={data.skillNames} />
+        {parts.rest.map((block, index) => <BlockBoundary key={`extra:${index}`}>
+          <JsonBlock label="附加内容" payload={block} truncatedLabel={truncatedJsonLabel} />
+        </BlockBoundary>)}
+      </div>}
+      <UserMessageCopy time={data.time} text={parts.text} />
     </div>;
   }
   if (isNode(node, 'assistant-step')) return null;
@@ -207,7 +218,7 @@ export function Reader(props: ReaderProps) {
       void props.loadOlder().then(() => scrollTo(item.anchorKey));
     }
   }, [root, props.loadOlder]);
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.14" data-motion={motion ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.15" data-motion={motion ? 'on' : 'off'}>
     <TurnRail items={turnItems} activeTurn={activeTurn} onNavigate={navigateTurn} />
     <div className={css.column}>
       <div className={css.toolbar} data-ud-check="reader-toolbar">

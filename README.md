@@ -6,8 +6,8 @@
 
 ## 兼容性
 
-- 插件版本：`0.2.0`
-- DeepSeek Harness：`0.1.2-alpha.1`
+- 插件版本：`0.3.15`
+- DeepSeek Harness：`0.1.3-alpha.1`（`0.1.2-alpha.1` 亦可运行）
 - Node.js：`^22.19.0 || >=24`
 - Web profile
 
@@ -56,7 +56,7 @@ dsh plugin --profile web remove dsh-better-display
 
 ## 开发
 
-开发构建需要一份完整、已安装依赖并完成 `build:lib` 的 DeepSeek Harness `0.1.2-alpha.1` checkout：
+开发构建需要一份完整、已安装依赖并完成 `build:lib` 的 DeepSeek Harness `0.1.3-alpha.1` checkout：
 
 ```sh
 export DSH_HARNESS=/absolute/path/to/deepseek-harness

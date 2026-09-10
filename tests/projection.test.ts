@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AssistantChatData, ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
-import type { AssistantBlock, TurnLocation, ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import { assistantSegments, boundaryOf, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel, toolFailed } from '../src/client/projection.ts';
+import type { AssistantBlock, TurnLocation, ToolCallBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import { assistantSegments, boundaryOf, contentBlocks, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, splitUserContent, terminalLabel, toolFailed } from '../src/client/projection.ts';
 import type { TurnBoundary } from '../src/client/projection.ts';
 import { activityPhase, activitySummary, inputFields, readerFlow } from '../src/client/tool-activity.ts';
 
@@ -177,4 +177,38 @@ test('a nonzero terminal exit is a failure even when the tool transport is non-e
   assert.equal(activityPhase({ block }), 'failed');
   assert.equal(activityPhase({ block: { ...block, meta: undefined } as ToolCallBlock }), 'returned');
   assert.equal(activityPhase({}, true), 'interrupted');
+});
+
+test('a sent message keeps its text in the bubble and its attachments outside it', () => {
+  const image = { attachmentId: 'i1', name: 'shot.png', bytes: 717, mediaType: 'image/png' };
+  const file = { attachmentId: 'f1', name: '报告.pdf', bytes: 20480 };
+  const parts = splitUserContent([
+    { type: 'image', attachment: image },
+    { type: 'text', text: '发送内容为什么会显示这个，' },
+    { type: 'text', text: '优化下插件' },
+    { type: 'file', attachment: file },
+  ] as UserMessageNode['content']);
+  // Adjacent text blocks are one message: providers split them, the reader rejoins them verbatim.
+  assert.equal(parts.text, '发送内容为什么会显示这个，优化下插件');
+  assert.deepEqual(parts.images, [image]);
+  assert.deepEqual(parts.files, [file]);
+  assert.deepEqual(parts.rest, []);
+});
+
+test('attachment-only messages have no bubble text, and unknown blocks stay visible instead of vanishing', () => {
+  assert.equal(splitUserContent([{ type: 'image', attachment: { attachmentId: 'i', bytes: 1 } }] as UserMessageNode['content']).text, '');
+  assert.equal(splitUserContent([]).text, '');
+  const audio = { type: 'audio', attachment: { attachmentId: 'a' } };
+  const parts = splitUserContent([audio, { type: 'text', text: '附一段音频' }] as UserMessageNode['content']);
+  assert.deepEqual(parts.rest, [audio]);
+  assert.equal(parts.text, '附一段音频');
+});
+
+test('durable content maps to reader blocks without dropping a kind the reader cannot present', () => {
+  const blocks = contentBlocks([
+    { type: 'text', text: '文本' },
+    { type: 'image', attachment: { attachmentId: 'i', bytes: 1 } },
+    { type: 'file', attachment: { attachmentId: 'f', bytes: 1 } },
+  ] as UserMessageNode['content']);
+  assert.deepEqual(blocks.map(block => block.kind), ['text', 'image', 'other']);
 });

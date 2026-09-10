@@ -17,9 +17,19 @@
 .root button:focus-visible, .root summary:focus-visible { outline: 2px solid var(--dsw-alias-state-business-primary); outline-offset: 3px; }
 .turn { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .turn + .turn { margin-top: 12px; }
-.user { align-self: flex-end; max-width: min(525px, 82%); padding: 10px 16px; border-radius: 22px; background: var(--dsw-specific-bubble); color: var(--dsw-alias-label-primary); line-height: 24px; margin-bottom: 4px; overflow-wrap: anywhere; }
+.user { align-self: flex-end; max-width: min(525px, 82%); padding: 10px 16px; border-radius: 22px; background: var(--dsw-specific-bubble); color: var(--dsw-alias-label-primary); font-size: var(--dsh-content-font-size, 14px); line-height: calc(22px + var(--dsh-content-font-delta, 0px)); white-space: pre-wrap; word-break: break-word; margin-bottom: 4px; overflow-wrap: anywhere; }
 .user .blocks { gap: 10px; }
 .userGroup { display: flex; flex-direction: column; align-items: flex-end; min-width: 0; }
+/* Sent attachments sit above the bubble, right-aligned, exactly as in the chat. */
+.userAttachments { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: min(525px, 82%); margin-bottom: 8px; }
+.userAttachments .imageFigure { width: min(100%, 320px); align-self: auto; }
+.userAttachments .imageFigure[data-compact] { width: 132px; }
+.userAttachments .imageFigure figcaption { display: none; }
+.fileCard { display: inline-flex; flex: 0 0 240px; align-items: center; gap: 10px; width: 240px; min-height: 64px; padding: 8px 12px; border: 0.5px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12)); border-radius: 16px; background: var(--dsw-specific-input-major, transparent); box-sizing: border-box; text-align: left; }
+.fileIcon { flex: none; width: 24px; height: 28px; }
+.fileContent { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.fileName { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dsw-alias-label-primary); font-size: 14px; font-weight: 500; line-height: 22px; }
+.fileMeta { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--dsw-alias-label-tertiary, rgba(0, 0, 0, 0.45)); font-size: 12px; line-height: 15px; }
 .userActions { display: flex; align-items: center; gap: 10px; height: 28px; margin-top: 2px; }
 .userTime { font-size: 12px; line-height: 20px; color: var(--dsw-alias-label-tertiary); white-space: nowrap; }
 .userCopy { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 6px; border: none; border-radius: 50%; background: transparent; color: var(--dsw-alias-label-tertiary); cursor: pointer; }

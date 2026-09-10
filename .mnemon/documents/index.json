@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "documents": [
+    {
+      "id": "4fffe36c-14ff-4c01-82d5-1cb8cb1ce445",
+      "title": "dsh-better-display 适配 Harness 0.1.3：MessageText 移除的根因、迁移与重建流程",
+      "description": "插件在 Host 0.1.3 上「发送内容」显示兜底提示的确证根因、projectUserText 迁移、slot augmentation 类型坑，以及本机 staging 重建流程",
+      "status": "active",
+      "filename": "dsh-better-display-harness-0-1-3-messagetext-4fffe36c.md",
+      "relativePath": "documents/active/dsh-better-display-harness-0-1-3-messagetext-4fffe36c.md",
+      "sourcePaths": [
+        "src/client/Blocks.tsx",
+        "src/client/Reader.tsx",
+        "src/client/Reader.module.css",
+        "src/client/projection.ts",
+        "src/client/types.ts",
+        "src/client/index.tsx",
+        "src/client/ToolActivity.tsx",
+        "tests/projection.test.ts",
+        "scripts/client-build.mjs",
+        "scripts/link-harness-dependencies.mjs",
+        "CHANGELOG.md",
+        "README.md",
+        "package.json"
+      ],
+      "sessionIds": [
+        "7dd960cd-e243-469d-875b-f46addf2709f"
+      ],
+      "createdAt": "2026-09-08T03:56:04.073Z",
+      "updatedAt": "2026-09-08T03:56:04.073Z",
+      "lastAccessedAt": "2026-09-08T03:56:04.073Z",
+      "revision": 1,
+      "contentHash": "79d19e1b81ea03d1a78d11daa9394ba7c992c5b3e471d608afed6d48bcfaab8e",
+      "sizeBytes": 7376,
+      "memoryBodyIds": []
+    },
+    {
+      "id": "8825c6b0-73cf-4d2a-9567-7efbbb28f4a6",
+      "title": "dsh-better-display 合并上游 aa2246740 分支：时间轴/用量/产物功能与 0.1.3 类型适配",
+      "description": "上游 fork（aa2246740/dsh-better-display）与本地 0.3.15 工作区的手工合并记录：新增 TimelineRail/TurnMetrics/deliverables/mcp-app 等 18 个文件改动，保留 projectUserText 修复，及对 0.1.3-alpha.1 staging 类型的三处适配",
+      "status": "active",
+      "filename": "dsh-better-display-aa2246740-0-1-3-8825c6b0.md",
+      "relativePath": "documents/active/dsh-better-display-aa2246740-0-1-3-8825c6b0.md",
+      "sourcePaths": [
+        "src/client/TimelineRail.tsx",
+        "src/client/TurnMetrics.tsx",
+        "src/client/deliverables.ts",
+        "src/client/mcp-app.ts",
+        "src/client/types.ts",
+        "src/client/index.tsx",
+        "src/client/Reader.tsx",
+        "src/client/Blocks.tsx"
+      ],
+      "sessionIds": [
+        "cbc2741c-74dc-4d0b-b22d-fae57c2e213b"
+      ],
+      "createdAt": "2026-09-09T06:10:44.746Z",
+      "updatedAt": "2026-09-09T06:10:44.746Z",
+      "lastAccessedAt": "2026-09-09T06:10:44.746Z",
+      "revision": 1,
+      "contentHash": "9def56d0fb9f69de286cef6eb9d4c2410edcf44c672ac76aa66b3cc56471d5b0",
+      "sizeBytes": 5201,
+      "memoryBodyIds": []
+    }
+  ]
+}

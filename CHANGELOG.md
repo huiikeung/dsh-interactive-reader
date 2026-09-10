@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.15
+
+- 修复在 Harness `0.1.3-alpha.1` 上每条「发送内容」都显示「此内容暂时无法在阅读页显示」：Host 的 UI 原语已移除 `MessageText`，阅读页改用当前的 `projectUserText`，并在更早的 Host 上自动退回纯文本而不是整条报错。
+- 发送消息的附件按原生对话的方式排布：图片与文件卡片移到气泡上方，`file` 附件渲染为文件名 + 扩展名 + 大小的卡片，不再落入「此内容类型尚未接入阅读页」的原始 JSON。
+- 相邻的多个文本块按原样拼接为一条消息；未知内容块仍然可见，不会被丢弃。
+- 气泡排版对齐原生：沿用 `--dsh-content-font-size` / `--dsh-content-font-delta` 字号轴与 `white-space: pre-wrap`，引用 chip 与换行与原生一致。
+- 修正插槽类型装载方式（`import type {}` 会被擦除，导致 `useSession` / `sessionId` 等会话标准 props 从类型里消失）。
+
 ## 0.3.14
 
 - Add the reading view's right-side turn rail: preview and jump to / load all paginated Turns, mirroring the native chat's TurnNavigator.

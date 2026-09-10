@@ -1,8 +1,10 @@
 import { Component, Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
-import type { AssistantBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import { IconCheckOutline16, IconCopyOutline16, JsonBlock, MessageText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives';
+import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
+import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import {
+  DocumentFileIcon, IconCheckOutline16, IconCopyOutline16, JsonBlock, fileSizeText, projectUserText, writeClipboard,
+} from '@deepseek-ai/dsh-client-ui-primitives';
 import type { BlockRenderProps, ReaderBlockOwner } from './types.js';
 import { useStreamingText } from './streaming.js';
 import { MotionMarkdown, MotionPlainText } from './word-motion.js';
@@ -19,8 +21,8 @@ export class BlockBoundary extends Component<{ children: ReactNode }, { failed: 
   }
 }
 
-export const ImageBlock = memo(function ImageBlock({ attachment, loadImage }: {
-  attachment: ImageAttachmentRef; loadImage: BlockRenderProps['loadImage'];
+export const ImageBlock = memo(function ImageBlock({ attachment, loadImage, compact = false }: {
+  attachment: ImageAttachmentRef; loadImage: BlockRenderProps['loadImage']; compact?: boolean;
 }) {
   const [attempt, setAttempt] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export const ImageBlock = memo(function ImageBlock({ attachment, loadImage }: {
   }, [attachment.attachmentId, attempt, loadImage]);
   const width = Number.isFinite(attachment.width) && attachment.width > 0 ? attachment.width : 4;
   const height = Number.isFinite(attachment.height) && attachment.height > 0 ? attachment.height : 3;
-  return <figure className={css.imageFigure} data-reader-image data-image-state={error ? 'error' : decoded ? 'ready' : 'loading'}>
+  return <figure className={css.imageFigure} data-reader-image data-compact={compact || undefined} data-image-state={error ? 'error' : decoded ? 'ready' : 'loading'}>
     <div className={css.imageFrame} style={{ aspectRatio: `${width} / ${height}` }}>
       {!error && url && <button ref={opener} type="button" className={css.imageOpen} aria-label={`放大图片${attachment.name ? `：${attachment.name}` : ''}`} onClick={() => dialog.current?.showModal()}>
         <img src={url} alt={attachment.name ?? '会话图片'} width={width} height={height} onLoad={() => setDecoded(true)} onError={() => setError(true)} data-ready={decoded} />
@@ -63,12 +65,40 @@ export const ImageBlock = memo(function ImageBlock({ attachment, loadImage }: {
   </figure>;
 });
 
-export function contentBlocks(content: UserMessageNode['content']): AssistantBlock[] {
-  return content.map(block => {
-    if (block.type === 'text') return { kind: 'text', text: block.text };
-    if (block.type === 'image') return { kind: 'image', attachment: block.attachment };
-    return { kind: 'other', block };
-  });
+/**
+ * One sent message's text, projected the way the native chat projects it:
+ * `@file` / `@session` mentions and loaded `/skill` tokens become chips, and
+ * everything else stays verbatim (never Markdown — a sent message is not an answer).
+ *
+ * `projectUserText` is the Host's current surface; it replaced the older
+ * `MessageText` component. It is called through a guard rather than assumed, so
+ * an Host that predates it still shows the text instead of failing the message.
+ */
+export function UserText({ text, sessionLabels, slashNames }: {
+  text: string; sessionLabels?: readonly string[]; slashNames?: readonly string[];
+}) {
+  let projected: ReactNode = null;
+  try {
+    if (typeof projectUserText === 'function') projected = projectUserText(text, sessionLabels ?? [], slashNames ?? []);
+  } catch {
+    projected = null;
+  }
+  return <>{projected ?? text}</>;
+}
+
+/** One sent file, as the native chat cards it: name over extension and size. */
+export function FileCard({ attachment }: { attachment: FileAttachmentRef }) {
+  const dot = attachment.name.lastIndexOf('.');
+  const extension = dot > 0 && dot < attachment.name.length - 1
+    ? attachment.name.slice(dot + 1).toUpperCase().slice(0, 8)
+    : '';
+  return <span className={css.fileCard} title={attachment.name}>
+    <DocumentFileIcon className={css.fileIcon} />
+    <span className={css.fileContent}>
+      <span className={css.fileName}>{attachment.name}</span>
+      <span className={css.fileMeta}>{[extension, fileSizeText(attachment.bytes)].filter(Boolean).join(' ')}</span>
+    </span>
+  </span>;
 }
 
 type TextPresentation = { startedAt?: number; interrupted?: boolean; liveText?: boolean };
@@ -98,7 +128,7 @@ function ReadingReasoning({ text, streaming, holdFormatting, startedAt, interrup
 
 function fallback(block: AssistantBlock, streaming: boolean, source: ReaderBlockOwner['source'], loadImage: BlockRenderProps['loadImage'], holdFormatting: boolean, presentation: TextPresentation): ReactNode {
   switch (block.kind) {
-    case 'text': return source === 'user' ? <MessageText text={block.text} /> : <ReadingMarkdown text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
+    case 'text': return source === 'user' ? <UserText text={block.text} /> : <ReadingMarkdown text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
     case 'image': return <ImageBlock attachment={block.attachment} loadImage={loadImage} />;
     case 'reasoning': return <ReadingReasoning text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
     case 'tool-call': return <JsonBlock label={`工具参数 · ${block.name}`} payload={block.argsRaw} truncatedLabel={truncatedJsonLabel} />;
@@ -139,12 +169,11 @@ export function CopyAnswer({ blocks }: { blocks: readonly AssistantBlock[] }) {
 }
 
 /** Copy action for a user message, matching the native chat's clock+copy row. */
-export function UserMessageCopy({ blocks, time }: { blocks: readonly AssistantBlock[]; time?: number }) {
+export function UserMessageCopy({ text, time }: { text: string; time?: number }) {
   const [copied, setCopied] = useState(false);
   const pending = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  const text = blocks.filter((block): block is Extract<AssistantBlock, { kind: 'text' }> => block.kind === 'text').map(block => block.text).join('\n');
   if (!text.trim()) return null;
   const onCopy = async () => {
     if (copied || pending.current) return;

@@ -1,9 +1,52 @@
 import type { AssistantChatData, ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
-import type { AssistantBlock, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { AssistantBlock, ToolCallBlock, TurnLocation, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { executionFacts } from './tool-activity.js';
 
 export interface ReaderGroup { key: string; turn: number | null; keys: readonly string[] }
 export interface TurnBoundary { status: 'open' | 'closed' | 'unknown'; reason: string | null; latestStep: number; closingStep: number | null }
+
+/** One sent message split the way the native chat splits it. */
+export interface UserContentParts {
+  /** Adjacent text blocks joined with no separator: that is how providers flatten them. */
+  text: string;
+  images: ImageAttachmentRef[];
+  files: FileAttachmentRef[];
+  /** Blocks this build has no presentation for; they stay visible, never dropped. */
+  rest: unknown[];
+}
+
+/**
+ * Separate a sent message into bubble text and attachment rows.
+ *
+ * Attachments leave the bubble in the native chat, and a `file` receipt is a
+ * card, not raw JSON — so the reading view reads the same durable content the
+ * same way instead of falling through to the unknown-block notice.
+ */
+export function splitUserContent(content: UserMessageNode['content']): UserContentParts {
+  const texts: string[] = [];
+  const images: ImageAttachmentRef[] = [];
+  const files: FileAttachmentRef[] = [];
+  const rest: unknown[] = [];
+  for (const block of content) {
+    const part = block as { type?: string; text?: unknown; attachment?: unknown };
+    if (part.type === 'text' && typeof part.text === 'string') texts.push(part.text);
+    else if (part.type === 'image' && part.attachment !== undefined) images.push(part.attachment as ImageAttachmentRef);
+    else if (part.type === 'file' && part.attachment !== undefined) files.push(part.attachment as FileAttachmentRef);
+    else rest.push(block);
+  }
+  return { text: texts.join(''), images, files, rest };
+}
+
+/** Map durable content blocks onto the reader's own block vocabulary. */
+export function contentBlocks(content: UserMessageNode['content']): AssistantBlock[] {
+  return content.map(block => {
+    if (block.type === 'text') return { kind: 'text', text: block.text };
+    if (block.type === 'image') return { kind: 'image', attachment: block.attachment };
+    return { kind: 'other', block };
+  });
+}
+
 
 // Run on structural publication, not on each text delta. Node seats subscribe by key.
 export function groupNodes(order: readonly string[], get: (key: string) => ChatConversationViewNode | undefined): ReaderGroup[] {

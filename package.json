@@ -1,6 +1,6 @@
 {
   "name": "dsh-better-display",
-  "version": "0.3.15",
+  "version": "0.1.0",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",
@@ -15,16 +15,13 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./cordis.patch.yml": "./cordis.patch.yml",
     "./package.json": "./package.json"
   },
   "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    },
     "client": {
       "platform": "web",
       "inject": [
+        "@deepseek-ai/dsh-api-session-controller",
         "@deepseek-ai/dsh-client-ui-chat",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-renderer",
@@ -39,27 +36,29 @@
     "link:harness": "node scripts/link-harness-dependencies.mjs"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-attachment": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-store": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-chat": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-session": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-session": "^0.1.2-alpha.1",
-    "@deepseek-ai/dsh-util-workspace-path": "^0.1.2-alpha.1",
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-api-session-controller": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-attachment": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-store": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-chat": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-session": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-session": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-util-workspace-path": "^0.1.2-rc.1",
     "react": "^18.2.0"
   },
   "devDependencies": {
+    "@deepseek-ai/dsh-api-session-controller": "0.1.2-rc.1",
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
-    "lightningcss": "^1.32.0",
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@deepseek-ai/dsh-session-turn-outline": "0.1.2-rc.1"
   },
   "dependencies": {
     "clsx": "^2.0.0",
@@ -79,11 +78,12 @@
   },
   "files": [
     "lib",
+    "skills",
     "src",
     "tests",
     "scripts",
-    "cordis.patch.yml",
-
+    "cordis.yml",
+    "dshx.yml",
     "tsconfig.json",
     "tsdown.config.ts",
     "README.md",
@@ -97,15 +97,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/huiikeung/dsh-better-display.git"
+    "url": "git+https://github.com/aa2246740/dsh-better-display.git"
   },
-  "homepage": "https://github.com/huiikeung/dsh-better-display#readme",
+  "homepage": "https://github.com/aa2246740/dsh-better-display#readme",
   "bugs": {
-    "url": "https://github.com/huiikeung/dsh-better-display/issues"
+    "url": "https://github.com/aa2246740/dsh-better-display/issues"
   },
   "keywords": [
     "deepseek-harness",
-    "deepseek-harness",
+    "dshx",
     "conversation",
     "reasoning",
     "streaming",

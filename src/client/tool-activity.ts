@@ -1,5 +1,6 @@
-import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { AssistantBlock, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { ReaderGroup } from './projection.js';
 
 export type ToolDraft = Extract<AssistantBlock, { kind: 'tool-call' }>;
@@ -23,9 +24,7 @@ export function readerFlow(group: ReaderGroup, turn: TurnLocation | undefined, g
     if (node.kind === 'tool-call') {
       const block = (node.data as { root: ToolCallBlock }).root;
       calls.set(block.callId, { kind: 'tool', key: `reader-tool:${block.callId}`, callId: block.callId, step, block, order: node.anchorSeq });
-    } else if (node.kind !== 'turn-process') {
-      // alpha.1 projects this synthetic disclosure controller into the public
-      // order. Reader owns its own disclosure, so it is not transcript content.
+    } else {
       flow.push({ kind: 'node', key, nodeKey: key, order: node.anchorSeq });
       if (node.kind === 'assistant-step') assistantOrder.set(step, node.anchorSeq);
     }
@@ -104,12 +103,21 @@ export function executionFacts(block: ToolCallBlock | undefined): { exitCode?: n
   if (!block || !('kind' in block)) return {};
   const meta = objectValue(block.meta);
   const code = meta?.exitCode ?? meta?.exit_code;
-  return { exitCode: typeof code === 'number' && Number.isFinite(code) ? code : undefined, signal: stringValue(meta, 'signal') };
+  const text = block.content.length === 1 && block.content[0]?.type === 'text' ? block.content[0].text : '';
+  const exit = /\n\[exit code: (\d+)\]$/.exec(text);
+  const signal = /\n\[killed by signal: ([^\]\n]+)\]$/.exec(text);
+  const parsedCode = exit?.[1] === undefined ? undefined : Number(exit[1]);
+  return {
+    exitCode: typeof code === 'number' && Number.isFinite(code) ? code : parsedCode,
+    signal: stringValue(meta, 'signal') ?? signal?.[1],
+  };
 }
 
 export function activityPhase(entry: Pick<ToolActivityEntry, 'block' | 'draft'>, turnClosed = false): ToolPhase {
   if (!entry.block) return turnClosed ? 'interrupted' : 'preparing';
   if (!('kind' in entry.block)) return turnClosed ? 'interrupted' : 'running';
+  // RC1 publishes canonical cancellation as an error result with a typed code.
+  if (entry.block.error?.code === 'ABORTED' || entry.block.error?.code === 'interrupted') return 'interrupted';
   const facts = executionFacts(entry.block);
   if (entry.block.isError || facts.signal || (facts.exitCode !== undefined && facts.exitCode !== 0)
     || entry.block.subCalls.some(block => activityPhase({ block }, turnClosed) === 'failed')) return 'failed';
@@ -124,9 +132,9 @@ export function activitySummary(entry: Pick<ToolActivityEntry, 'block' | 'draft'
   const command = stringValue(args, 'command', 'cmd', 'script');
   const description = stringValue(args, 'description');
   const file = target?.split(/[/\\]/).at(-1);
-  const category: ToolCategory = /^(write|edit|apply_patch|patch)$/.test(name) ? 'write'
+  const category: ToolCategory = /^(write|edit|apply_patch|patch|str_replace_editor)$/.test(name) ? 'write'
     : /^(read|read_file)$/.test(name) ? 'read'
-    : /^(bash|shell|terminal|exec_command|pwsh)$/.test(name) ? 'terminal'
+    : /^(bash|shell|terminal|terminal_send|exec_command|pwsh)$/.test(name) ? 'terminal'
     : /^(grep|glob|find|search)$/.test(name) ? 'search'
     : /^(web_search|web_fetch|web_open)$/.test(name) ? 'web' : 'other';
   const title = category === 'write' ? `${name === 'write' ? '写入' : '修改'}${file ? ` ${file}` : name === 'apply_patch' ? '代码补丁' : '文件'}`
@@ -136,7 +144,7 @@ export function activitySummary(entry: Pick<ToolActivityEntry, 'block' | 'draft'
     : category === 'web' ? name === 'web_search' ? '搜索网页' : '读取网页'
     : name;
   return { name, raw, args, category, title, target: target ?? command ?? stringValue(args, 'query', 'pattern', 'url'), command,
-    cwd: stringValue(args, 'workdir', 'cwd'), content: stringValue(args, 'content', 'new_string', 'newText') };
+    cwd: stringValue(args, 'workdir', 'cwd'), content: stringValue(args, 'content', 'new_string', 'newText', 'file_text') };
 }
 
 export function preparingLabel(name: string): string {

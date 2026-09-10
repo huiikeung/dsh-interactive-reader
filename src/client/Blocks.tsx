@@ -1,14 +1,13 @@
 import { Component, Fragment, memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { FileAttachmentRef, ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
-import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import {
-  DocumentFileIcon, IconCheckOutline16, IconCopyOutline16, JsonBlock, fileSizeText, projectUserText, writeClipboard,
-} from '@deepseek-ai/dsh-client-ui-primitives';
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
+import type { AssistantBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import { JsonBlock, MessageText, writeClipboard } from '@deepseek-ai/dsh-client-ui-primitives';
+import { ComposerFillContext, McpAppFrame } from './McpAppFrame.js';
+import { truncatedJsonLabel } from './primitive-labels.js';
 import type { BlockRenderProps, ReaderBlockOwner } from './types.js';
 import { useStreamingText } from './streaming.js';
 import { MotionMarkdown, MotionPlainText } from './word-motion.js';
-import { truncatedJsonLabel } from './native-labels.js';
 import css from './Reader.module.css';
 
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
@@ -21,8 +20,8 @@ export class BlockBoundary extends Component<{ children: ReactNode }, { failed: 
   }
 }
 
-export const ImageBlock = memo(function ImageBlock({ attachment, loadImage, compact = false }: {
-  attachment: ImageAttachmentRef; loadImage: BlockRenderProps['loadImage']; compact?: boolean;
+export const ImageBlock = memo(function ImageBlock({ attachment, loadImage }: {
+  attachment: ImageAttachmentRef; loadImage: BlockRenderProps['loadImage'];
 }) {
   const [attempt, setAttempt] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
@@ -47,7 +46,7 @@ export const ImageBlock = memo(function ImageBlock({ attachment, loadImage, comp
   }, [attachment.attachmentId, attempt, loadImage]);
   const width = Number.isFinite(attachment.width) && attachment.width > 0 ? attachment.width : 4;
   const height = Number.isFinite(attachment.height) && attachment.height > 0 ? attachment.height : 3;
-  return <figure className={css.imageFigure} data-reader-image data-compact={compact || undefined} data-image-state={error ? 'error' : decoded ? 'ready' : 'loading'}>
+  return <figure className={css.imageFigure} data-reader-image data-image-state={error ? 'error' : decoded ? 'ready' : 'loading'}>
     <div className={css.imageFrame} style={{ aspectRatio: `${width} / ${height}` }}>
       {!error && url && <button ref={opener} type="button" className={css.imageOpen} aria-label={`放大图片${attachment.name ? `：${attachment.name}` : ''}`} onClick={() => dialog.current?.showModal()}>
         <img src={url} alt={attachment.name ?? '会话图片'} width={width} height={height} onLoad={() => setDecoded(true)} onError={() => setError(true)} data-ready={decoded} />
@@ -65,45 +64,17 @@ export const ImageBlock = memo(function ImageBlock({ attachment, loadImage, comp
   </figure>;
 });
 
-/**
- * One sent message's text, projected the way the native chat projects it:
- * `@file` / `@session` mentions and loaded `/skill` tokens become chips, and
- * everything else stays verbatim (never Markdown — a sent message is not an answer).
- *
- * `projectUserText` is the Host's current surface; it replaced the older
- * `MessageText` component. It is called through a guard rather than assumed, so
- * an Host that predates it still shows the text instead of failing the message.
- */
-export function UserText({ text, sessionLabels, slashNames }: {
-  text: string; sessionLabels?: readonly string[]; slashNames?: readonly string[];
-}) {
-  let projected: ReactNode = null;
-  try {
-    if (typeof projectUserText === 'function') projected = projectUserText(text, sessionLabels ?? [], slashNames ?? []);
-  } catch {
-    projected = null;
-  }
-  return <>{projected ?? text}</>;
-}
-
-/** One sent file, as the native chat cards it: name over extension and size. */
-export function FileCard({ attachment }: { attachment: FileAttachmentRef }) {
-  const dot = attachment.name.lastIndexOf('.');
-  const extension = dot > 0 && dot < attachment.name.length - 1
-    ? attachment.name.slice(dot + 1).toUpperCase().slice(0, 8)
-    : '';
-  return <span className={css.fileCard} title={attachment.name}>
-    <DocumentFileIcon className={css.fileIcon} />
-    <span className={css.fileContent}>
-      <span className={css.fileName}>{attachment.name}</span>
-      <span className={css.fileMeta}>{[extension, fileSizeText(attachment.bytes)].filter(Boolean).join(' ')}</span>
-    </span>
-  </span>;
+export function contentBlocks(content: UserMessageNode['content']): AssistantBlock[] {
+  return content.map(block => {
+    if (block.type === 'text') return { kind: 'text', text: block.text };
+    if (block.type === 'image') return { kind: 'image', attachment: block.attachment };
+    return { kind: 'other', block };
+  });
 }
 
 type TextPresentation = { startedAt?: number; interrupted?: boolean; liveText?: boolean };
 
-function ReadingMarkdown({ text, streaming, holdFormatting, startedAt, interrupted = false, liveText = false, kind = 'body' }: { text: string; streaming: boolean; holdFormatting: boolean; kind?: 'body' | 'reasoning' } & TextPresentation) {
+function ReadingMarkdown({ text, streaming, holdFormatting, startedAt, interrupted = false, liveText = false, kind = 'body', fileMentions }: { text: string; streaming: boolean; holdFormatting: boolean; kind?: 'body' | 'reasoning'; fileMentions?: BlockRenderProps['fileMentions'] } & TextPresentation) {
   const root = useRef<HTMLDivElement>(null);
   const presentation = useStreamingText(text, streaming, { startedAt, interrupted: interrupted || !liveText, selected: holdFormatting });
   // Native Markdown changes block keys for its full final parse. Keep the last
@@ -114,7 +85,7 @@ function ReadingMarkdown({ text, streaming, holdFormatting, startedAt, interrupt
   useLayoutEffect(() => { committedMode.current = effectiveMode; }, [effectiveMode]);
   return <div ref={root} className={css.readingText} data-reader-text data-reader-text-kind={kind} data-received-length={text.length} data-shown-length={presentation.text.length}
     data-presentation-pending={presentation.pending || undefined} data-motion-style="opacity-blur" data-ud-motion="reader-text-arrival" data-ud-motion-type="reveal" data-ud-motion-no-flash="true">
-    <MotionMarkdown text={presentation.text} streaming={effectiveMode} enabled={liveText && presentation.reveal && effectiveMode} revision={presentation.revision} />
+    <MotionMarkdown text={presentation.text} streaming={effectiveMode} enabled={liveText && presentation.reveal && effectiveMode} revision={presentation.revision} fileMentions={fileMentions} />
   </div>;
 }
 
@@ -126,30 +97,43 @@ function ReadingReasoning({ text, streaming, holdFormatting, startedAt, interrup
   </div>;
 }
 
-function fallback(block: AssistantBlock, streaming: boolean, source: ReaderBlockOwner['source'], loadImage: BlockRenderProps['loadImage'], holdFormatting: boolean, presentation: TextPresentation): ReactNode {
+function fallback(block: AssistantBlock, streaming: boolean, source: ReaderBlockOwner['source'], loadImage: BlockRenderProps['loadImage'], fillComposer: BlockRenderProps['fillComposer'], holdFormatting: boolean, presentation: TextPresentation, fileMentions?: BlockRenderProps['fileMentions']): ReactNode {
   switch (block.kind) {
-    case 'text': return source === 'user' ? <UserText text={block.text} /> : <ReadingMarkdown text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
+    case 'text': return source === 'user' ? <MessageText text={block.text} /> : <ReadingMarkdown text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} fileMentions={fileMentions} />;
     case 'image': return <ImageBlock attachment={block.attachment} loadImage={loadImage} />;
     case 'reasoning': return <ReadingReasoning text={block.text} streaming={streaming} holdFormatting={holdFormatting} {...presentation} />;
     case 'tool-call': return <JsonBlock label={`工具参数 · ${block.name}`} payload={block.argsRaw} truncatedLabel={truncatedJsonLabel} />;
-    case 'other': return <div className={css.unknown}>
-      <p>此内容类型尚未接入阅读页，原始内容已保留。</p>
-      <JsonBlock label="查看原始内容" payload={block.block} truncatedLabel={truncatedJsonLabel} />
-    </div>;
+    case 'other': {
+      const raw = block.block;
+      if (raw && typeof raw === 'object') {
+        const item = raw as Record<string, unknown>;
+        if ((item.type === 'mcp-app' || item.type === 'mcpapp' || item.type === 'ui') && typeof item.html === 'string') {
+          return <McpAppFrame html={item.html} title={typeof item.title === 'string' ? item.title : undefined} fillComposer={fillComposer} />;
+        }
+      }
+      return <div className={css.unknown}>
+        <p>此内容类型尚未接入阅读页，原始内容已保留。</p>
+        <JsonBlock label="查看原始内容" payload={block.block} truncatedLabel={truncatedJsonLabel} />
+      </div>;
+    }
   }
 }
 
-export const Blocks = memo(function Blocks({ blocks, streaming = false, source = 'assistant', holdFormatting = false, startedAt, interrupted, liveText, renderSlotChain, loadImage }: BlockRenderProps & TextPresentation & {
+export const Blocks = memo(function Blocks({ blocks, streaming = false, source = 'assistant', holdFormatting = false, startedAt, interrupted, liveText, renderSlotChain, loadImage, fillComposer, fileMentions }: BlockRenderProps & TextPresentation & {
   blocks: readonly AssistantBlock[]; streaming?: boolean; source?: ReaderBlockOwner['source']; holdFormatting?: boolean;
 }) {
-  return <div className={css.blocks} data-streaming={streaming || undefined}>
-    {blocks.map((block, index) => <BlockBoundary key={block.kind === 'image' ? `image:${block.attachment.attachmentId}:${index}` : `${index}:${block.kind}`}>
-      <Fragment>{renderSlotChain('dsh-better-display.block', { block, streaming, source }, { fallback: fallback(block, streaming, source, loadImage, holdFormatting, { startedAt, interrupted, liveText }) })}</Fragment>
-    </BlockBoundary>)}
-  </div>;
+  return <ComposerFillContext.Provider value={fillComposer}>
+    <div className={css.blocks} data-streaming={streaming || undefined}>
+      {blocks.map((block, index) => <BlockBoundary key={block.kind === 'image' ? `image:${block.attachment.attachmentId}:${index}` : `${index}:${block.kind}`}>
+        <Fragment>{renderSlotChain('dsh-better-display.block', { block, streaming, source }, { fallback: fallback(block, streaming, source, loadImage, fillComposer, holdFormatting, { startedAt, interrupted, liveText }, fileMentions) })}</Fragment>
+      </BlockBoundary>)}
+    </div>
+  </ComposerFillContext.Provider>;
 });
 
-export function CopyAnswer({ blocks }: { blocks: readonly AssistantBlock[] }) {
+import { TurnMetrics } from './TurnMetrics.js';
+
+export function CopyAnswer({ blocks, onFork, metrics }: { blocks: readonly AssistantBlock[]; onFork?: () => void; metrics?: BlockRenderProps['metrics'] }) {
   const [receipt, setReceipt] = useState('');
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
@@ -164,30 +148,23 @@ export function CopyAnswer({ blocks }: { blocks: readonly AssistantBlock[] }) {
     }}>
       <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5" /><path d="M3 10H2.8A.8.8 0 0 1 2 9.2V2.8a.8.8 0 0 1 .8-.8h6.4a.8.8 0 0 1 .8.8V3" /></svg>
     </button>
+    {onFork && (
+      <button
+        type="button"
+        className={css.iconButton}
+        aria-label="以此处为基础创建分叉会话"
+        title="以此处为基础创建分叉会话 (Fork)"
+        onClick={onFork}
+      >
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.2">
+          <circle cx="4.5" cy="3.5" r="1.8" />
+          <circle cx="4.5" cy="12.5" r="1.8" />
+          <circle cx="11.5" cy="5.5" r="1.8" />
+          <path d="M4.5 5.5v5M4.5 8c2.5 0 4.5-1 7-2.5" strokeLinecap="round" />
+        </svg>
+      </button>
+    )}
+    {metrics && <TurnMetrics {...metrics} />}
     <span role="status" className={css.meta}>{receipt}</span>
-  </div>;
-}
-
-/** Copy action for a user message, matching the native chat's clock+copy row. */
-export function UserMessageCopy({ text, time }: { text: string; time?: number }) {
-  const [copied, setCopied] = useState(false);
-  const pending = useRef(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  if (!text.trim()) return null;
-  const onCopy = async () => {
-    if (copied || pending.current) return;
-    pending.current = true;
-    const ok = await writeClipboard(text);
-    pending.current = false;
-    if (!ok) return;
-    setCopied(true);
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopied(false), 1000);
-  };
-  const timeText = typeof time === 'number' ? new Date(time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) : null;
-  return <div className={css.userActions}>
-    {timeText && <span className={css.userTime}>{timeText}</span>}
-    <button type="button" className={css.userCopy} aria-label={copied ? '已复制' : '复制'} title={copied ? '已复制' : '复制'} onClick={onCopy}>{copied ? <IconCheckOutline16 /> : <IconCopyOutline16 />}</button>
   </div>;
 }

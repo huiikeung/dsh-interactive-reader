@@ -1,15 +1,16 @@
 import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { DiffHunk, ReadBlockLine, SearchFileGroup } from '@deepseek-ai/dsh-client-ui-primitives';
 import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlock, WebBlock,
   IconApiOutline14, IconBrowseOutline16, IconEditOutline16, IconSearchOutline16, IconSkillOutline16, IconSparkle16 } from '@deepseek-ai/dsh-client-ui-primitives';
-import { Blocks } from './Blocks.js';
-import { contentBlocks } from './projection.js';
+import { Blocks, contentBlocks } from './Blocks.js';
 import { ProcessFragment } from './motion.js';
-import { activityPhase, activitySummary, executionFacts } from './tool-activity.js';
+import { activityPhase, activitySummary, executionFacts, objectValue, toolIdentity } from './tool-activity.js';
 import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity.js';
 import type { BlockRenderProps } from './types.js';
 import { classifyTool, toolRowModel, VARIANT_TITLES } from './native/tool-call-model.js';
-import { jsonTreeLabels, readBlockLabels, terminalBlockLabels } from './native-labels.js';
+import { McpAppFrame, StreamingMcpAppPlaceholder } from './McpAppFrame.js';
+import { diffBlockLabels, jsonTreeLabels, readBlockLabels, searchBlockLabels, terminalBlockLabels, webBlockLabels } from './primitive-labels.js';
 import css from './Reader.module.css';
 
 const LABEL: Record<ToolPhase, string> = { preparing: '输入生成中', running: '执行中', returned: '已返回', succeeded: '已完成', failed: '失败', interrupted: '已中断' };
@@ -26,27 +27,95 @@ function generatedInput(content: string, target: string | undefined, preparing: 
   </div>;
 }
 
-function InputView({ model, preparing }: { model: ReturnType<typeof activitySummary>; preparing: boolean }) {
+function InputView({ model, preparing, fillComposer }: { model: ReturnType<typeof activitySummary>; preparing: boolean; fillComposer: BlockRenderProps['fillComposer'] }) {
+  if ((model.name === 'render_ui' || model.name === 'show_widget') && typeof model.args?.html === 'string') {
+    return preparing
+      ? <StreamingMcpAppPlaceholder title={typeof model.args.title === 'string' ? (model.args.title as string) : undefined} />
+      : <McpAppFrame html={model.args.html as string} title={typeof model.args.title === 'string' ? (model.args.title as string) : undefined} fillComposer={fillComposer} />;
+  }
   if (model.content) return generatedInput(model.content, model.target, preparing);
   if (model.command) return <div data-reader-tool-terminal><p className={css.toolDetailNote}>{preparing ? '正在生成命令 · 尚未执行' : '提交的命令'}</p><TerminalBlock command={model.command} cwd={model.cwd} labels={terminalBlockLabels} /></div>;
   return <JsonTree data={model.args} label={preparing ? '已收到的输入字段' : '工具输入'} labels={jsonTreeLabels} />;
 }
 
+function readLines(value: unknown): ReadBlockLine[] | null {
+  if (!Array.isArray(value)) return null;
+  const lines: ReadBlockLine[] = [];
+  for (const item of value) {
+    const row = objectValue(item);
+    if (typeof row?.number !== 'number' || !Number.isInteger(row.number) || typeof row.text !== 'string') return null;
+    lines.push({ number: row.number, text: row.text });
+  }
+  return lines;
+}
+
+function diffHunks(value: unknown): DiffHunk[] | null {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const diffs: DiffHunk[] = [];
+  for (const item of value) {
+    const row = objectValue(item);
+    if (typeof row?.path !== 'string' || (row.oldText !== null && typeof row.oldText !== 'string') || typeof row.newText !== 'string') return null;
+    diffs.push({ path: row.path, oldText: row.oldText, newText: row.newText });
+  }
+  return diffs;
+}
+
+function searchFiles(value: unknown): SearchFileGroup[] | null {
+  if (!Array.isArray(value)) return null;
+  const files: SearchFileGroup[] = [];
+  for (const item of value) {
+    const row = objectValue(item);
+    if (typeof row?.path !== 'string' || !Array.isArray(row.matches)) return null;
+    const matches: { lineNumber: number; line: string }[] = [];
+    for (const itemMatch of row.matches) {
+      const match = objectValue(itemMatch);
+      if (typeof match?.lineNumber !== 'number' || !Number.isInteger(match.lineNumber) || typeof match.line !== 'string') return null;
+      matches.push({ lineNumber: match.lineNumber, line: match.line });
+    }
+    files.push({ path: row.path, matches });
+  }
+  return files;
+}
+
 function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
+  if ((model.name === 'render_ui' || model.name === 'show_widget') && typeof model.args?.html === 'string') {
+    return <McpAppFrame html={model.args.html as string} title={typeof model.args.title === 'string' ? (model.args.title as string) : undefined} fillComposer={render.fillComposer} />;
+  }
   const block = entry.block;
   if (!block || !('kind' in block)) return <>
     <p className={css.toolDetailNote}>{phase === 'interrupted' ? '已中断，没有工具结果。已生成的输入仍可查看。' : phase === 'preparing' ? '模型正在生成工具输入，工具还未开始执行。' : '工具已开始执行，正在等待结果。'}</p>
-    <InputView model={model} preparing={phase === 'preparing'} />
+    <InputView model={model} preparing={phase === 'preparing'} fillComposer={render.fillComposer} />
   </>;
+  const meta = objectValue(block.meta);
   const text = block.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
+  if (phase === 'interrupted') return <><p className={css.toolDetailNote}>工具已取消，未正常完成。输入和原始返回记录仍可查看。</p><InputView model={model} preparing={false} fillComposer={render.fillComposer} /><pre className={css.toolRaw}>{text}</pre></>;
   if (model.category === 'terminal') {
     const facts = executionFacts(block);
+    const output = text.replace(/\n\[(?:exit code: \d+|killed by signal: [^\]\n]+)\]$/, '');
     return <div data-reader-tool-terminal><TerminalBlock command={model.command ?? model.name} cwd={model.cwd}
-      output={text} exitCode={facts.exitCode} signal={facts.signal} maxLines={18} labels={terminalBlockLabels} /></div>;
+      output={output} exitCode={facts.exitCode} signal={facts.signal} maxLines={18} labels={terminalBlockLabels} /></div>;
   }
-  // Alpha.1 removed the host-computed resultView/callView presentation. Keep
-  // submitted file content visible while deriving all result truth from the
-  // durable content/meta fields below.
+  const lines = readLines(meta?.lines);
+  if (model.category === 'read' && typeof meta?.path === 'string' && typeof meta.totalLines === 'number' && lines) return <div data-reader-tool-file><ReadBlock label={meta.path} lang={typeof meta.lang === 'string' ? meta.lang : undefined} lines={lines} totalLines={meta.totalLines} maxLines={18} labels={readBlockLabels} /></div>;
+  const diffs = diffHunks(meta?.diffs);
+  if (model.category === 'write' && diffs) return <div data-reader-tool-diff><DiffBlock diffs={diffs} maxLines={18} labels={diffBlockLabels} /></div>;
+  if (model.category === 'search' && typeof meta?.total === 'number' && typeof meta.truncated === 'boolean') {
+    if (meta.shape === 'paths' && Array.isArray(meta.paths) && meta.paths.every((path): path is string => typeof path === 'string')) return <div data-reader-tool-search><SearchBlock kind="paths" paths={meta.paths} total={meta.total} truncated={meta.truncated} maxLines={18} labels={searchBlockLabels} /></div>;
+    const files = searchFiles(meta.files);
+    if (meta.shape === 'matches' && files) return <div data-reader-tool-search><SearchBlock kind="matches" files={files} total={meta.total} truncated={meta.truncated} maxLines={18} labels={searchBlockLabels} /></div>;
+  }
+  if (model.category === 'web' && typeof meta?.truncated === 'boolean') {
+    if (model.name === 'web_fetch' && typeof meta.url === 'string' && typeof meta.statusCode === 'number') return <div data-reader-tool-web><WebBlock kind="fetch" url={meta.url} statusCode={meta.statusCode} truncated={meta.truncated} labels={webBlockLabels} /></div>;
+    if (model.name === 'web_search' && Array.isArray(meta.sources)) {
+      const sources = meta.sources.flatMap(source => {
+        const item = objectValue(source);
+        return typeof item?.url === 'string' ? [{ url: item.url, ...(typeof item.title === 'string' ? { title: item.title } : {}), ...(typeof item.snippet === 'string' ? { snippet: item.snippet } : {}), ...(typeof item.publishedAt === 'string' ? { publishedAt: item.publishedAt } : {}) }] : [];
+      });
+      if (sources.length === meta.sources.length) return <div data-reader-tool-web><WebBlock kind="search" sources={sources} answer={typeof meta.answer === 'string' ? meta.answer : undefined} truncated={meta.truncated} labels={webBlockLabels} /></div>;
+    }
+  }
+  // A trace/export may omit wire presentation. Keep the generated input clearly
+  // labelled; it is not proof of an applied diff or a successful file mutation.
   if (model.category === 'write' && model.content && !block.isError) return <>
     <p className={css.toolDetailNote}>文件工具已返回。以下为提交的内容；完整返回记录可在「原始数据」查看。</p>
     {generatedInput(model.content, model.target, false)}
@@ -87,7 +156,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   const native = block ? toolRowModel(model.name, block) : null;
   const skillName = typeof model.args?.name === 'string' ? model.args.name.split('\n')[0] : model.raw.split('\n')[0];
   const rowTitle = model.name === 'skill' ? 'Skill' : native?.title ?? VARIANT_TITLES[classifyTool(model.name)];
-  const rowSummary = model.name === 'skill' ? skillName : native?.errorSummary ?? native?.summary
+  const rowSummary = phase === 'interrupted' ? '已停止 · 调用记录保留' : model.name === 'skill' ? skillName : native?.errorSummary ?? native?.summary
     ?? (classifyTool(model.name) === 'others' ? `${model.name} · ${model.target ?? model.title}` : model.target ?? model.title);
   const showState = phase === 'preparing' || phase === 'running' || phase === 'failed' || phase === 'interrupted';
   const elapsed = block && 'kind' in block && block.callTime != null ? Math.max(0, block.time - block.callTime) : null;
@@ -119,7 +188,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
         <div ref={panel} id={`${detailId}-panel`} className={css.toolPanel} role="tabpanel" aria-labelledby={`${detailId}-${tab}`} tabIndex={0}>
           {selected && <p className={css.toolDetailNote}>为保留选区，预览暂停更新；当前状态见卡片标题。</p>}
           {tab === 'result' && <ResultView {...render} {...preview} />}
-          {tab === 'input' && <><InputView model={preview.model} preparing={preview.phase === 'preparing'} /><details className={css.detail}><summary>全部输入字段</summary><JsonTree data={preview.model.args} label="输入字段" labels={jsonTreeLabels} /></details></>}
+          {tab === 'input' && <><InputView model={preview.model} preparing={preview.phase === 'preparing'} fillComposer={render.fillComposer} /><details className={css.detail}><summary>全部输入字段</summary><JsonTree data={preview.model.args} label="输入字段" labels={jsonTreeLabels} /></details></>}
           {tab === 'raw' && <><p className={css.toolDetailNote}>完整记录 · 只读 · 不执行其中的代码</p><h4 className={css.toolRawLabel}>工具输入</h4><pre className={css.toolRaw}>{preview.model.raw || '输入尚未到达'}</pre>{rawResult && <><h4 className={css.toolRawLabel}>工具结果</h4><pre className={css.toolRaw}>{rawResult}</pre></>}</>}
         </div>
       </div>
@@ -131,13 +200,13 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
 }, (previous, next) => previous.entry.callId === next.entry.callId && previous.entry.block === next.entry.block
   && previous.entry.draft === next.entry.draft && previous.entry.step === next.entry.step
   && previous.motion === next.motion && previous.turnClosed === next.turnClosed && previous.depth === next.depth
-  && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage);
+  && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage && previous.fillComposer === next.fillComposer);
 
-/** Only genuine media (images) stays in the flow; failures surface inside the folded tool record. */
+/** Rich media (images, MCP widgets) rendered outside the folded tool ledger. */
 export function ToolMedia({ block, depth = 0, ...render }: BlockRenderProps & { block: ToolCallBlock; depth?: number }) {
   if (depth > 6) return null;
   const settled = 'kind' in block;
-  const visible = settled ? contentBlocks(block.content).filter(item => !block.isError && (item.kind === 'image' || item.kind === 'other')) : [];
+  const visible = settled ? contentBlocks(block.content).filter(item => item.kind === 'image' || item.kind === 'other') : [];
   return <>
     {visible.length > 0 && <Blocks {...render} blocks={visible} source="tool" />}
     {block.subCalls.map(child => <ToolMedia key={child.callId} {...render} block={child} depth={depth + 1} />)}

@@ -1,77 +1,53 @@
 # dsh-better-display
 
-适用于 DeepSeek Harness 的独立阅读视图插件。
+[English](./README.en.md)
 
-执行期间按原始顺序展示思考、工具调用和进度；一轮成功完成后收起过程并保留最终回答。插件增加独立的「阅读」页签，不修改 Agent、SDK、提示词、模型设置或会话记录。
+给 DeepSeek Harness 加一个 **阅读** 页签：执行时能看到步骤、思考和进度；整轮成功结束后把过程收起来，留下最终回答。原版「对话 / 轨迹」、输入框、模型选择、工具和审批都还在。
 
-## 兼容性
+最终回答里的 ````mcp-app` 代码块会在阅读视图里挂成交互卡片，跑在 `<iframe sandbox="allow-scripts allow-forms">` 里，没有 `allow-same-origin`。卡片可以通过 JSON-RPC 把下一轮 prompt 填进输入框。技能包在 [`skills/generative-mcpapps/`](skills/generative-mcpapps/)。
 
-- 插件版本：`0.3.15`
-- DeepSeek Harness：`0.1.3-alpha.1`（`0.1.2-alpha.1` 亦可运行）
-- Node.js：`^22.19.0 || >=24`
-- Web profile
-
-本仓库包含预构建的 `lib/client.js`。普通安装不需要额外的开发套件，也不需要在本机重新构建。
+v0.2.0。只改展示，不改 Agent 执行、SDK 或模型凭据。Node.js `^22.19.0 || >=24`。
 
 ## 安装
 
-从 npm registry 安装已发布版本：
+需要能用的 DeepSeek Harness 和 [dshx](https://github.com/aa2246740/dsh-external-plugin-devkit)。
 
 ```sh
-dsh plugin --profile web add dsh-better-display
+export DSHX_HARNESS=/absolute/path/to/deepseek-harness
+export DSH_HOME=/absolute/path/to/your/dsh-home
+export DSH_WEB_PORT=3080
+
+git clone https://github.com/aa2246740/dsh-better-display.git "$DSHX_HARNESS/my-plugins/dsh-better-display"
+cd "$DSHX_HARNESS/my-plugins/dsh-better-display"
+
+node scripts/link-harness-dependencies.mjs "$DSHX_HARNESS"
+npm test
+DSHX_HARNESS="$DSHX_HARNESS" npm run build
+
+dshx check dsh-better-display --harness "$DSHX_HARNESS"
+dshx activation-plan dsh-better-display --change new-client --harness "$DSHX_HARNESS"
+dshx activate-new-client dsh-better-display --profile web --port "$DSH_WEB_PORT" --harness "$DSHX_HARNESS"
 ```
 
-从 GitHub SSH 仓库安装：
+首次安装不用重启 DSH。刷新或重开 Web 页面后选「阅读」。新会话默认进阅读。
+
+更新已有安装：
 
 ```sh
-dsh plugin --profile web add git+ssh://git@github.com/huiikeung/dsh-better-display.git
+git pull
+DSHX_HARNESS="$DSHX_HARNESS" npm run build
 ```
 
-从本地目录安装：
-
-```sh
-dsh plugin --profile web add /absolute/path/to/dsh-better-display
-```
-
-插件声明了标准 `dsh.bundle.patch`，`dsh plugin` 会把它加入 `web` profile。首次安装后重启当前 Web Host，再刷新或重新打开页面。页面中会出现「阅读」页签；在地址后添加 `?reader=1` 可进入阅读一次，新会话默认进入阅读。
-
-卸载：
-
-```sh
-dsh plugin --profile web remove dsh-better-display
-```
-
-不要同时启用旧的 `dsh-reader` 试用插件，两者占用同一个阅读视图位置。
-
-## 功能
-
-- 思考、工具调用和中途说明保持原始顺序。
-- 长思考以两行步进平滑跟随，滚动、聚焦或选字时暂停。
-- 仅在一轮成功完成后自动收起过程；错误、中断和等待用户操作时保留过程。
-- 保留 Markdown、代码、表格、公式、链接、图片及工具原始数据。
-- 遵守系统的减少动态效果设置。
-- 不执行模型生成的 HTML 或 JavaScript。
-
-没有收到 reasoning 的消息不会补写或推测思考。插件不翻译、摘要或重新解释原始 Think 文本。
+然后刷新浏览器。
 
 ## 开发
 
-开发构建需要一份完整、已安装依赖并完成 `build:lib` 的 DeepSeek Harness `0.1.3-alpha.1` checkout：
-
 ```sh
-export DSH_HARNESS=/absolute/path/to/deepseek-harness
-node scripts/link-harness-dependencies.mjs "$DSH_HARNESS"
 npm test
 npm run typecheck
-npm run build
+DSHX_HARNESS=/absolute/path/to/deepseek-harness npm run build
 ```
-
-构建适配器位于本仓库的 `scripts/client-build.mjs`。它读取指定 Harness checkout 的客户端平台模块清单，以生成 DSH Web Loader 使用的 `lib/client.js`。
-
-42 项单元测试覆盖顺序、轮次结束、异常保留、两行跟随、Unicode、Markdown 和流式缓冲。测试通过不等于插件已在真实页面加载，发布前仍需完成 Web profile 安装和浏览器验证。
-
-`dsh-better-display.block` 是供受信任插件使用的 chain slot，公开 owner 类型为 `ReaderBlockOwner`。未知内容有安全兜底和独立错误边界。
 
 ## 许可
 
-本项目使用 MIT License。原生展示与 Markdown 部分来自 DeepSeek Harness（MIT）。动效参考 Transitions.dev 的免费 Streaming text、Thinking states 和 Reasoning stream；第三方许可见 `THIRD_PARTY_NOTICES.md`。
+展示与 Markdown 部分来自 DeepSeek Harness（MIT）。动效参考 [Transitions.dev](https://transitions.dev/)。本仓库代码 [MIT](LICENSE)。

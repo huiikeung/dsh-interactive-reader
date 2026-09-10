@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import type { AssistantBlock, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { AssistantChatData, ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
-import type { AssistantBlock, TurnLocation, ToolCallBlock, UserMessageNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import { assistantSegments, boundaryOf, contentBlocks, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, splitUserContent, terminalLabel, toolFailed } from '../src/client/projection.ts';
+import { assistantSegments, boundaryOf, forkAnchorSeq, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel, toolFailed } from '../src/client/projection.ts';
 import type { TurnBoundary } from '../src/client/projection.ts';
 import { activityPhase, activitySummary, inputFields, readerFlow } from '../src/client/tool-activity.ts';
 
@@ -12,6 +12,19 @@ function assistant(values: Partial<AssistantChatData> = {}): AssistantChatData {
 }
 const active: TurnBoundary = { status: 'open', reason: null, latestStep: 2, closingStep: null };
 const completed: TurnBoundary = { ...active, status: 'closed', reason: 'completed', closingStep: 2 };
+
+test('RC1 system prompts belong to process details', () => {
+  assert.equal(hasProcessContent({ kind: 'system-prompt', visibility: 'visible', data: { text: 'system' } } as ChatConversationViewNode, completed), true);
+});
+
+test('canonical cancellation is interrupted while genuine failures stay failed', () => {
+  const cancelled = { kind: 'tool-result', isError: true, error: { code: 'ABORTED', name: 'AbortError' }, content: [{ type: 'text', text: 'Error: tool call aborted' }], subCalls: [] } as unknown as ToolCallBlock;
+  assert.equal(activityPhase({ block: cancelled }), 'interrupted');
+  assert.equal(toolFailed(cancelled), false);
+  const failure = { ...cancelled, error: { code: 'OTHER' }, content: [{ type: 'text', text: 'failure' }], meta: { exitCode: 7 } } as ToolCallBlock;
+  assert.equal(activityPhase({ block: failure }, true), 'failed');
+  assert.equal(toolFailed(failure), true);
+});
 
 test('reasoning and body retain original order, content and identities across streaming appends', () => {
   const first: AssistantBlock = { kind: 'reasoning', text: '**原始标点**\n  原始空格\n' };
@@ -118,8 +131,8 @@ test('missing historical boundaries remain explicit uncertainty', () => {
 });
 
 test('a failed child tool is not hidden by a successful parent summary', () => {
-  const failed = { kind: 'tool-result', isError: true, subCalls: [] } as unknown as ToolCallBlock;
-  const parent = { kind: 'tool-result', isError: false, subCalls: [failed] } as unknown as ToolCallBlock;
+  const failed = { kind: 'tool-result', isError: true, content: [], subCalls: [] } as unknown as ToolCallBlock;
+  const parent = { kind: 'tool-result', isError: false, content: [], subCalls: [failed] } as unknown as ToolCallBlock;
   assert.equal(toolFailed(parent), true);
 });
 
@@ -142,23 +155,6 @@ test('tool input is visible before execution, including native-hidden tool-only 
   assert.equal(running[0]?.key, pending[0].key, 'one call keeps the same React key at execution');
 });
 
-test('alpha.1 turn-process controls do not render as transcript content', () => {
-  const turn = { turn: 1, steps: [] } as unknown as TurnLocation;
-  const control = {
-    key: 'turn-process:1', kind: 'turn-process', visibility: 'visible', anchorSeq: 2,
-    data: { turn: 1 }, location: { kind: 'turn', turn },
-  } as unknown as ChatConversationViewNode;
-  const reasoning = {
-    key: 'assistant:1', kind: 'assistant-step', visibility: 'visible', anchorSeq: 3,
-    data: assistant({ blocks: [{ kind: 'reasoning', text: '真实思考' }, text] }),
-    location: { kind: 'turn', turn },
-  } as unknown as ChatConversationViewNode;
-  const nodes = new Map([[control.key, control], [reasoning.key, reasoning]]);
-  const flow = readerFlow({ key: 'turn:1', turn: 1, keys: [...nodes.keys()] }, turn, key => nodes.get(key));
-  assert.deepEqual(flow.map(item => item.kind === 'node' ? item.nodeKey : item.key), [reasoning.key]);
-  assert.equal(hasProcessContent(reasoning, active), true);
-});
-
 test('partial argument parsing respects JSON nesting, escapes and unfinished unicode', () => {
   const source = JSON.stringify({ file_path: '/work/真实.html', content: '"file_path":"fake"\n你好😀', nested: { file_path: 'also fake' } });
   for (let cut = source.indexOf('content') + 10; cut <= source.length; cut++) {
@@ -172,43 +168,17 @@ test('partial argument parsing respects JSON nesting, escapes and unfinished uni
 });
 
 test('a nonzero terminal exit is a failure even when the tool transport is non-error', () => {
-  const block = { kind: 'tool-result', isError: false, meta: { exitCode: 7 }, subCalls: [] } as unknown as ToolCallBlock;
+  const block = { kind: 'tool-result', isError: false, content: [], meta: { exitCode: 7 }, subCalls: [] } as unknown as ToolCallBlock;
   assert.equal(toolFailed(block), true);
   assert.equal(activityPhase({ block }), 'failed');
-  assert.equal(activityPhase({ block: { ...block, meta: undefined } as ToolCallBlock }), 'returned');
+  assert.equal(activityPhase({ block: { ...block, meta: null } as ToolCallBlock }), 'returned');
   assert.equal(activityPhase({}, true), 'interrupted');
 });
 
-test('a sent message keeps its text in the bubble and its attachments outside it', () => {
-  const image = { attachmentId: 'i1', name: 'shot.png', bytes: 717, mediaType: 'image/png' };
-  const file = { attachmentId: 'f1', name: '报告.pdf', bytes: 20480 };
-  const parts = splitUserContent([
-    { type: 'image', attachment: image },
-    { type: 'text', text: '发送内容为什么会显示这个，' },
-    { type: 'text', text: '优化下插件' },
-    { type: 'file', attachment: file },
-  ] as UserMessageNode['content']);
-  // Adjacent text blocks are one message: providers split them, the reader rejoins them verbatim.
-  assert.equal(parts.text, '发送内容为什么会显示这个，优化下插件');
-  assert.deepEqual(parts.images, [image]);
-  assert.deepEqual(parts.files, [file]);
-  assert.deepEqual(parts.rest, []);
-});
-
-test('attachment-only messages have no bubble text, and unknown blocks stay visible instead of vanishing', () => {
-  assert.equal(splitUserContent([{ type: 'image', attachment: { attachmentId: 'i', bytes: 1 } }] as UserMessageNode['content']).text, '');
-  assert.equal(splitUserContent([]).text, '');
-  const audio = { type: 'audio', attachment: { attachmentId: 'a' } };
-  const parts = splitUserContent([audio, { type: 'text', text: '附一段音频' }] as UserMessageNode['content']);
-  assert.deepEqual(parts.rest, [audio]);
-  assert.equal(parts.text, '附一段音频');
-});
-
-test('durable content maps to reader blocks without dropping a kind the reader cannot present', () => {
-  const blocks = contentBlocks([
-    { type: 'text', text: '文本' },
-    { type: 'image', attachment: { attachmentId: 'i', bytes: 1 } },
-    { type: 'file', attachment: { attachmentId: 'f', bytes: 1 } },
-  ] as UserMessageNode['content']);
-  assert.deepEqual(blocks.map(block => block.kind), ['text', 'image', 'other']);
+test('fork anchor prefers the durable closing seq and never yields a missing anchor', () => {
+  assert.equal(forkAnchorSeq([{ seq: 42 }]), 42);
+  assert.equal(forkAnchorSeq([null, undefined, {}, { seq: '42' as unknown as number }, { seq: 7 }]), 7);
+  assert.equal(forkAnchorSeq([{ seq: NaN }, { seq: Infinity }, { seq: 100.5 }]), 100.5);
+  assert.equal(forkAnchorSeq([]), undefined);
+  assert.equal(forkAnchorSeq([null, {}, { seq: undefined }]), undefined);
 });

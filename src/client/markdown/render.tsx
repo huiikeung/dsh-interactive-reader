@@ -25,6 +25,8 @@ import type {} from 'mdast-util-math'
 import { normalizeUri } from 'micromark-util-sanitize-uri'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { renderTexToReact } from './katex.js'
+import { McpAppCodeBlock, StreamingMcpAppPlaceholder } from '../McpAppFrame.js'
+import { isMcpAppCodeBlock, extractMcpAppTitle, extractMcpAppHeight } from '../mcp-app.js'
 import type { PositionedBlock } from './incremental.js'
 import css from './MarkdownText.module.css'
 
@@ -330,6 +332,16 @@ function renderCode(node: Md.Code, key: Key, context: MarkdownRenderContext): Re
   // The replaced pipeline recovered the grammar id from the hast class with
   // /language-([\w-]+)/, which truncates at the first non-word character.
   const lang = language === undefined ? undefined : /^[\w-]+/.exec(language)?.[0]
+
+  if (isMcpAppCodeBlock(node.lang, node.meta, node.value)) {
+    const title = extractMcpAppTitle(node.meta, node.value)
+    const initialHeight = extractMcpAppHeight(node.meta)
+    if (context.streaming) {
+      return <StreamingMcpAppPlaceholder key={key} title={title} />
+    }
+    return <McpAppCodeBlock key={key} html={node.value} title={title} initialHeight={initialHeight} />
+  }
+
   if (!context.streaming && lang === 'math') {
     // ```math fences render as display TeX once settled (rehype-katex parity);
     // its text extraction saw the code block's trailing newline.
@@ -343,7 +355,7 @@ function renderCode(node: Md.Code, key: Key, context: MarkdownRenderContext): Re
       // that trim eat a REAL trailing blank line inside the fence instead.
       code={`${node.value}\n`}
       lang={context.streaming ? undefined : lang}
-      copyLabel={context.codeLabels?.copyLabel ?? '复制'}
+      copyLabel={context.codeLabels?.copyLabel ?? '复制代码'}
       copiedLabel={context.codeLabels?.copiedLabel ?? '已复制'}
     />
   )

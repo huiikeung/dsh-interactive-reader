@@ -1,12 +1,8 @@
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots';
-import type * as DshChat from '@deepseek-ai/dsh-client-ui-chat/client';
-import type * as DshConversation from '@deepseek-ai/dsh-client-ui-conversation/client';
-import type * as DshSession from '@deepseek-ai/dsh-client-ui-session/client';
 import type { createReaderStore } from './store.js';
-/** References the augmentation carriers; type-only, so it emits no code. */
-export type ReaderSlotCarriers = typeof DshChat | typeof DshConversation | typeof DshSession;
 export interface ReaderBlockOwner {
     block: AssistantBlock;
     streaming: boolean;
@@ -28,35 +24,31 @@ export interface ReaderInjected {
         data: Uint8Array;
         mediaType: string;
     }>;
-    openFile?: (path: string) => Promise<void> | void;
+    /**
+     * Writes text into this session's composer draft via the sanctioned
+     * conversation input face, with a DOM fallback. Returns true when the
+     * composer accepted the text.
+     */
+    fillComposer: (text: string) => boolean;
+    /** Open a workspace file or directory in the native host editor / file viewer. */
+    openFile: (path: string) => Promise<void> | void;
+    /** Reveal and highlight a workspace file in macOS Finder or Windows Explorer. */
     revealFile?: (path: string) => Promise<void> | void;
+    /** Fork the conversation at a specific message sequence into a new branch session. */
     forkAt?: (seq: number) => void;
+    /** Load session history through a target sequence number. */
     loadThrough?: (seq: unknown) => Promise<void>;
-    fillComposer?: (text: string) => boolean;
 }
 export type ReaderProps = PropsRuntime<'conversation.view'> & PropsLocale<'chat'> & PropsRenderSlots<'dsh-better-display.block'> & PropsStore<ReturnType<typeof createReaderStore>> & ReaderInjected;
 export type BlockRenderProps = Pick<ReaderProps, 'renderSlotChain' | 'loadImage' | 'fillComposer'> & {
     openFile?: (path: string) => Promise<void> | void;
     revealFile?: (path: string) => Promise<void> | void;
     forkAt?: (seq: number) => void;
-    fileMentions?: Record<string, {
-        open: () => void;
-        label: string;
-        title?: string;
-    }>;
+    /** Durable closing-message seq of this turn (turn-tail closing), used as the fork anchor. */
+    forkSeq?: number;
+    fileMentions?: MarkdownFileMentions;
     metrics?: {
-        usage?: {
-            uncachedInputTokens: number;
-            outputTokens: number;
-            totalTokens: number;
-            cacheReadTokens?: number;
-            cacheWriteTokens?: number;
-            reasoningTokens?: number;
-            routes?: readonly {
-                provider: string;
-                model: string;
-            }[];
-        };
+        usage?: NonNullable<import('@deepseek-ai/dsh-client-ui-chat/client').TurnTailChatData['tokenUsage']>;
         runMs?: number;
         tokensPerSecond?: number;
         ttftMs?: number;

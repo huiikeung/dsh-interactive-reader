@@ -5,7 +5,17 @@
     "declarationMap": true, "sourceMap": true,
     "rootDir": "src", "outDir": "lib/types", "jsx": "react-jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "types": ["node", "react"]
+    "types": ["node", "react"],
+    // The DSH runtime ships no @deepseek-ai/dsh-client-store on disk: the browser
+    // gets it from the Web shell's staticModules seed and the host reaches it
+    // through DSH's profile module-fallback link. TypeScript cannot follow that
+    // link, so without this mapping every SnapshotSelectorHook that
+    // dsh-client-ui-slots re-exports degrades to `any` under skipLibCheck, and a
+    // renamed DSH prop (useChat, useSessionStatus, ...) stops failing the build.
+    "paths": {
+      "@deepseek-ai/dsh-client-store": ["./node_modules/@deepseek-ai/dsh-client-store/lib/types/index.d.ts"],
+      "@deepseek-ai/dsh-client-store/*": ["./node_modules/@deepseek-ai/dsh-client-store/*"]
+    }
   },
   "include": ["src"]
 }

@@ -1,6 +1,6 @@
 {
   "name": "dsh-better-display",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",
@@ -33,35 +33,37 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json && tsdown",
+    "build": "tsc -p tsconfig.json && tsdown --config scripts/tsdown.standalone.config.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx/esm --test tests/*.test.ts",
     "link:harness": "node scripts/link-harness-dependencies.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-api-session-controller": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-attachment": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-store": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-chat": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-session": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-session": "^0.1.2-rc.1",
-    "@deepseek-ai/dsh-util-workspace-path": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-api-session-controller": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-attachment": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-store": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-chat": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-conversation": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-session": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-ui-slots": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-session": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-session-turn-outline": "^0.1.6-alpha.2",
+    "@deepseek-ai/dsh-util-workspace-path": "^0.1.6-alpha.2",
     "react": "^18.2.0"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-api-session-controller": "0.1.2-rc.1",
+    "@deepseek-ai/dsh-api-session-controller": "0.1.6-alpha.2",
+    "@deepseek-ai/dsh-client-store": "0.1.6-alpha.2",
     "@types/mdast": "^4.0.4",
     "@types/node": "^22.20.0",
     "@types/react": "~18.3.1",
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "@deepseek-ai/dsh-session-turn-outline": "0.1.2-rc.1"
+    "@deepseek-ai/dsh-session-turn-outline": "0.1.6-alpha.2"
   },
   "dependencies": {
     "clsx": "^2.0.0",

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.2.1
+
+Adapts the reading view to DeepSeek Harness `0.1.6-alpha.2`.
+
+- **Fixed the 阅读 tab crashing on open**: `src/client/store.ts` had been replaced with a
+  hand-rolled store whose handle had no `spec` and no `create()`. The renderer's store seat calls
+  `handle.create(scopeKey)` when the tab is selected, so every selection threw
+  `TypeError: handle.create is not a function` and the view rendered nothing. The real
+  `defineStore` from the shell-seeded `@deepseek-ai/dsh-client-store` is back.
+- **Migrated `useSessionPendingInteraction` → `useSessionStatus`**: 0.1.6 exposes pending
+  interactions per session through the global `useSessionStatus` selector
+  (`snapshot.get(sessionId)?.pendingInteraction`) instead of a dedicated hook.
+- **Migrated pending-submission echoes**: `PendingSubmission.images` became the ordered
+  `attachments` union of image previews and durable file references.
+- **Type-safe against the real contracts again**: `tsconfig.json` again sets `strict: true` and
+  maps `@deepseek-ai/dsh-client-store` to the installed package. Without that mapping the runtime's
+  missing copy made every `SnapshotSelectorHook` re-export degrade to `any` under `skipLibCheck`,
+  which is exactly why the renamed props above still compiled.
+- **Self-contained client build**: `npm run build` now uses
+  `scripts/tsdown.standalone.config.mjs`, which reproduces the official client-bundle contract
+  (lazy-CJS `__ModuleLoader__.load`, shell-seed and `dsh.client.inject` modules kept external,
+  hashed CSS-module class maps with injected `<style>` tags) without a Harness source checkout or
+  `lightningcss`.
+- 63 regression tests.
+
 ## 0.2.0
 
 Adds native generative MCP Apps (SEP-1865) support and rich interactive rendering.

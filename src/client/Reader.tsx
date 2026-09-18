@@ -225,8 +225,8 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   </div>;
 });
 
-function GroupStatus({ group, sessionId, useChat, useSessionPendingInteraction, motion }: Pick<ReaderProps, 'sessionId' | 'useChat' | 'useSessionPendingInteraction'> & { group: ReaderGroup; motion: boolean }) {
-  const pending = useSessionPendingInteraction(snapshot => snapshot.get(sessionId));
+function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pick<ReaderProps, 'sessionId' | 'useChat' | 'useSessionStatus'> & { group: ReaderGroup; motion: boolean }) {
+  const pending = useSessionStatus(snapshot => snapshot.get(sessionId)?.pendingInteraction);
   const text = useChat(snapshot => {
     const turn = group.turn === null ? undefined : snapshot.timeline.turns.get(group.turn);
     if (turn?.status === 'closed') {
@@ -478,9 +478,9 @@ const TurnGroup = memo(function TurnGroup({ group, motion, pinnedKeys, selectedP
   return <section className={css.turn} data-reader-turn={group.turn ?? 'unresolved'} data-reader-turn-state={boundary.status} data-reader-turn-result={boundary.reason ?? undefined}>
     {startsWithUser && <BlockBoundary><MainNode {...shared} boundary={boundary} nodeKey={group.keys[0]} /></BlockBoundary>}
     {hasProcess && <Disclosure open={expanded} onChange={setExpanded} controls={flowId} buttonRef={processButton}
-      label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionPendingInteraction={props.useSessionPendingInteraction} motion={motion} />} status={turn?.steps.length ? `${turn.steps.length} 个步骤` : undefined} />}
+      label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />} status={turn?.steps.length ? `${turn.steps.length} 个步骤` : undefined} />}
     {!hasProcess && boundary.status === 'open' && <div className={css.disclosure} data-reader-status-only>
-      <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionPendingInteraction={props.useSessionPendingInteraction} motion={motion} />
+      <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />
     </div>}
     <div id={flowId} className={css.mainFlow} data-reader-flow>
       {flow.map(item => item.kind === 'node' ? <Fragment key={item.key}>
@@ -505,7 +505,7 @@ export function Reader(props: ReaderProps) {
   const order = props.useChat(snapshot => snapshot.order);
   const nodes = props.useChat(snapshot => snapshot.nodes);
   const timeline = props.useChat(snapshot => snapshot.timeline);
-  const pending = props.useSessionPendingInteraction(snapshot => snapshot.get(props.sessionId));
+  const pending = props.useSessionStatus(snapshot => snapshot.get(props.sessionId)?.pendingInteraction);
   const openError = props.useSession(snapshot => snapshot.openError);
   const loading = props.useSession(snapshot => snapshot.openState === 'loading');
   const hasMore = props.useSession(snapshot => snapshot.hasMore);
@@ -639,7 +639,7 @@ export function Reader(props: ReaderProps) {
     return pendingSubmissions.filter(sub => sub.placement !== 'queued');
   }, [pendingSubmissions]);
 
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.1.0" data-motion={motion ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.2.1" data-motion={motion ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column}>
       <div className={css.toolbar} data-ud-check="reader-toolbar">
@@ -654,11 +654,15 @@ export function Reader(props: ReaderProps) {
       {openError && <div className={css.error} role="alert">会话暂时无法读取：{openError.message}</div>}
       {loading && groups.length === 0 && <p className={css.empty} role="status">正在读取会话…</p>}
       {groups.map(group => <TurnGroup key={group.key} {...props} group={group} motion={motion} pinnedKeys={pinnedKeys} selectedProcessKeys={selectedProcessKeys} />)}
-      {visibleSubmissions.map(submission => (
-        <div key={submission.requestId} className={css.userCluster} data-reader-pending-submission>
-          {submission.images && submission.images.length > 0 && (
+      {visibleSubmissions.map(submission => {
+        // DSH 0.1.6 replaced `images` with an ordered `attachments` union of
+        // image previews and durable file references; only the image branch has
+        // a preview to render before admission.
+        const images = submission.attachments.flatMap(attachment => attachment.type === 'image' ? [attachment.value] : []);
+        return <div key={submission.requestId} className={css.userCluster} data-reader-pending-submission>
+          {images.length > 0 && (
             <div className={css.userImages}>
-              {submission.images.map((img, idx) => (
+              {images.map((img, idx) => (
                 <figure key={idx} className={css.imageFigure}>
                   <div className={css.imageFrame} style={{ aspectRatio: `${img.width || 4} / ${img.height || 3}` }}>
                     <img src={img.previewUrl} alt={img.name ?? '发送的图片'} className={css.pendingImage} />
@@ -672,8 +676,8 @@ export function Reader(props: ReaderProps) {
               <div className={css.blocks}>{submission.text}</div>
             </div>
           ) : null}
-        </div>
-      ))}
+        </div>;
+      })}
       {pending !== undefined && <div className={css.attention} role="alert" data-reader-attention>
         <strong>{pending.kind === 'question' ? '需要你回答一个问题' : '需要你的确认'}</strong>
         <span>请在下方原生操作区处理。此提示不会收进执行过程。</span>

@@ -1,5 +1,5 @@
-import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { AssistantBlock, ToolCallBlock, TurnLocation } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { ChatConversationViewNode } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { ReaderGroup } from './projection.js';
 export type ToolDraft = Extract<AssistantBlock, {
     kind: 'tool-call';

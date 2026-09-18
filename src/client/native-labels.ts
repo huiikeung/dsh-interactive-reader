@@ -31,6 +31,7 @@ export const terminalBlockLabels: TerminalBlockLabels = {
   ...foldLabels,
   signal: signal => `信号 ${signal}`,
   exitCode: exitCode => `退出码 ${exitCode}`,
+  noExitCode: '未知退出码',
   running: '运行中',
   failed: '失败',
   done: '完成',

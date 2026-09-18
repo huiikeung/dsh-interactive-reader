@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import type { ChatViewSlotProps } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { ContextMessageNode, KnownContextForm } from '@deepseek-ai/dsh-client-ui-conversation/client';
-type Translate = ChatViewSlotProps['t'];
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots';
+type Translate = TranslateNS<'chat'>;
 /**
  * Default presentation: the model-facing text as text, with its real line
  * breaks, and the remaining source fields beneath it. This is what every form

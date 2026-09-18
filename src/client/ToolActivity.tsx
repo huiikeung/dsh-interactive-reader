@@ -55,7 +55,7 @@ function diffHunks(value: unknown): DiffHunk[] | null {
   for (const item of value) {
     const row = objectValue(item);
     if (typeof row?.path !== 'string' || (row.oldText !== null && typeof row.oldText !== 'string') || typeof row.newText !== 'string') return null;
-    diffs.push({ path: row.path, oldText: row.oldText, newText: row.newText });
+    diffs.push({ path: row.path as string, oldText: row.oldText as string | null, newText: row.newText as string });
   }
   return diffs;
 }

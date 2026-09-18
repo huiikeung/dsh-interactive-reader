@@ -38,6 +38,26 @@ Manual reading, selection and keyboard access take precedence over automatic fol
 
 Trusted plugins may register `dsh-better-display.block`. Native content remains the fallback. Generative MCP Apps (SEP-1865 / `io.modelcontextprotocol/ui`) are supported via an isolated, sandboxed iframe (`sandbox="allow-scripts allow-forms"`, strictly without `allow-same-origin`) communicating via bidirectional JSON-RPC `postMessage` (`ui/initialize`, `ui/resize`, `ui/update-model-context`, `ui/submit`).
 
+## Host compatibility
+
+Target DeepSeek Harness `0.1.6-alpha.2` (`dsh.client.platform: "web"`).
+
+- Read session state only through the standard slot props the shell provides (`useSession`,
+  `useChat`, `useSessionStatus`, `useProjection`, `useStore`). A renamed or removed seat must fail
+  `npm run typecheck`, never degrade silently: `tsconfig.json` maps
+  `@deepseek-ai/dsh-client-store` to the installed package because the runtime ships no on-disk
+  copy, and without that mapping every `SnapshotSelectorHook` re-export collapses to `any` under
+  `skipLibCheck`.
+- Never reimplement a module the Web shell already seeds. `@deepseek-ai/dsh-client-store`
+  (`defineStore`), `dsh-client-ui-slots`, `dsh-client-ui-primitives`, `cordis` and React stay
+  single-instance: the reader's per-session store must be a real handle with `spec` and
+  `create(scopeKey)`, because the renderer's store seat calls both.
+- The browser half must remain a lazy-CJS bundle registered through
+  `window.__ModuleLoader__.load({ id, factory })`, and may only `require` shell seed modules or
+  packages declared in `dsh.client.inject`.
+- Absent Host features degrade to a native fallback or a warning, never to a broken view: a
+  missing `remote.session` or reveal route only costs the optional open/reveal action.
+
 ## Verification
 
 Use unit coverage for projection, lifecycle, source-ordered streaming, graphemes, Markdown and two-line stepping. Verify live Host manifest, served bundle, native process details, literal reasoning, motion, successful folding, reopening, narrow layouts and reduced motion separately. Keep private session evidence outside this repository.

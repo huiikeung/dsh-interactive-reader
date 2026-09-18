@@ -37,5 +37,9 @@ export declare function CopyAnswer({ blocks, onFork, metrics }: {
     onFork?: () => void;
     metrics?: BlockRenderProps['metrics'];
 }): import("react").JSX.Element | null;
+export declare function UserMessageActions({ text, time }: {
+    text: string;
+    time?: number;
+}): import("react").JSX.Element | null;
 export {};
 //# sourceMappingURL=Blocks.d.ts.map

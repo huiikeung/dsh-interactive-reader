@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.3.0
+
+Merges upstream `aa2246740/dsh-better-display` main (`933a45c`, released there as v0.1.1) on top of
+our 0.1.6-alpha.2 work, then re-applies the 0.1.6 contract migration to the merged code.
+
+### Live folding and reading chrome
+
+- **Live fold**: while a turn is open, a later reasoning step collapses earlier steps of the same
+  chain into one disclosure (`思考×N`). Body or tool updates alone never trigger it; a mid-turn
+  user insert or steering message resets the chain. The auto-fold toggle can disable it.
+- **Fold choreography**: keyed rows shrink for 320ms, counters roll for 160ms, hold 80ms, then
+  reveal buffered output for 180ms. Preserve source order, selected text, reduced motion and the
+  visible final answer; incoming data coalesces into one frame instead of restarting the shrink.
+- **Closed process summary**: process counts stay discoverable after the live presentation retires.
+- **Waiting clock**: the status line counts up from the latest human input (user message or
+  non-queued pending submission), never from the enclosing turn's original start.
+- **Message chrome**: user messages and turn ends carry a local clock; the turn end also carries
+  its run duration, using the same copy as native chat (`用时 8分23秒`).
+- **Sticky reading lanes**: the toolbar and status measure themselves with ResizeObserver and
+  publish real lane geometry, so wrapped statistics no longer overlap.
+- **Composer-safe landing**: rail jumps scroll the conversation container instead of calling
+  `scrollIntoView`, which used to drag the sticky composer off the bottom of the viewport.
+- **`data-chat-flow`**: the reading column keeps ChatView's empty hook so third-party skins that
+  hide the composer when the scrollport lacks it (maid-atelier, phoebe-atelier, …) still treat
+  Reader as an interactive conversation.
+
+### Settings, deliverables and skills
+
+- **Better Display settings section**: deliverables open in the system app by default, with an
+  optional right-Sidebar preview, plus generative-mcpapps skill detection and install guidance.
+- **Sidebar preview**: uses the shell's `sidebarRight.openResource` with session-scoped
+  `dsh-resource://file/session/<id>/…` addresses from the official
+  `@deepseek-ai/dsh-util-workspace-path` helper.
+- **Skill status route**: `/better-display/skill-status` reports whether the generative-mcpapps
+  skill is installed in a conventional role, and install guidance names only relative roots
+  (`.dsh/skills`, `.agents/skills`).
+
+### Contract correctness
+
+- **Pending-submission echoes are defensive**: read `images` or the ordered `attachments` union,
+  and never touch `.length` on a missing field, so a text-only send cannot crash
+  `conversation.view`.
+- **`compaction` counts as process**: the host emits both `manual-compaction` and `compaction`
+  nodes; both now fold into the process disclosure.
+- **Turn metrics use the real token contract**: `TurnTokenUsage` in 0.1.6 has no `inputTokens`;
+  input is derived as `totalTokens - outputTokens`, and the popover gains cache-hit and reasoning
+  badges.
+- **Official typing instead of hand-rolled copies**: `settings.section` comes from
+  `@deepseek-ai/dsh-client-ui-settings/client`, the skill remote is typed against the branded
+  `SessionId`, and `tsconfig.json` maps `@deepseek-ai/dsh-client-store` so a DSH rename fails the
+  build instead of degrading every selector hook to `any`.
+- **Re-applied the 0.1.6 migration on merged code**: `useSessionPendingInteraction` →
+  `useSessionStatus` (`snapshot.get(id)?.pendingInteraction`), which upstream still used.
+
+### Distribution and verification
+
+- Kept our checkout-free standalone client build
+  ([`scripts/tsdown.standalone.config.mjs`](scripts/tsdown.standalone.config.mjs)); upstream's
+  `tsdown.config.ts` path remains for in-checkout work.
+- Kept our install/develop docs (no Harness source checkout required) and folded upstream's
+  `dsh plugin add` guidance and `dsh.bundle` caveat into them.
+- Upstream's new regression tests are included.
+
 ## 0.2.1
 
 Adapts the reading view to DeepSeek Harness `0.1.6-alpha.2`.

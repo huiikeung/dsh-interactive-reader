@@ -6,13 +6,13 @@ export declare function StatusText({ text, motion, shimmer }: {
     motion: boolean;
     shimmer?: boolean;
 }): import("react").JSX.Element;
-export declare function Disclosure({ open, onChange, label, status, controls, buttonRef }: {
+export declare function Disclosure({ open, onChange, label, controls, buttonRef, ariaLabel }: {
     open: boolean;
     onChange: (value: boolean) => void;
     label: ReactNode;
-    status?: string;
-    controls: string;
+    controls?: string;
     buttonRef: RefObject<HTMLButtonElement>;
+    ariaLabel?: string;
 }): import("react").JSX.Element;
 /** Supplemental details stay in source order beside their own narration. */
 export declare function ProcessFragment({ open, motion, onRead, returnFocusTo, nodeKey, children, framed }: {
@@ -32,5 +32,7 @@ export declare function RetiringContent({ visible, children }: {
 export declare function useReadingScroll(root: RefObject<HTMLElement>, motion: boolean): {
     detached: boolean;
     jump: () => void;
+    /** Stop tail-follow so a rail landing is not pulled back to the live bottom. */
+    release: () => void;
 };
 //# sourceMappingURL=motion.d.ts.map

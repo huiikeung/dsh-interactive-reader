@@ -1,9 +1,10 @@
 .container {
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   position: relative;
-  font-size: 11px;
-  line-height: 16px;
+  font-size: 13px;
+  line-height: 24px;
   color: var(--dsw-alias-label-tertiary);
 }
 
@@ -27,6 +28,29 @@
   color: var(--dsw-alias-label-primary);
   border-color: var(--dsw-alias-border-l2);
   background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.timeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 28px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 24px;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.timeButton:hover, .timeButton[data-active=true] {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
 }
 
 .pillIcon {
@@ -69,6 +93,23 @@
   color: var(--dsw-alias-label-primary);
   padding-bottom: 6px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.popClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.popClose:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-border-l1);
 }
 
 .popSection {

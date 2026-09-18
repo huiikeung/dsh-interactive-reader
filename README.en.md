@@ -2,51 +2,33 @@
 
 [中文](./README.md)
 
-Adds a **阅读** tab to DeepSeek Harness. While a turn runs you see steps, thinking, and progress. After a successful turn those collapse and the final answer stays. Native Chat / Trajectory, the composer, model picker, tools, and approvals stay.
-
-A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/).
-
-v0.2.1. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`.
-
-## Install
-
-Needs a working DeepSeek Harness. The plugin itself does not need a Harness source checkout.
-
 ```sh
-git clone https://github.com/aa2246740/dsh-better-display.git /path/to/dsh-better-display
-cd /path/to/dsh-better-display
-
-npm install
-npm test
-npm run build
+dsh plugin --profile web add github:aa2246740/dsh-better-display
 ```
 
-Then link that directory into the DSH web profile — through the DSH plugin manager, or:
+You need official `dsh` (or `npx @deepseek-ai/dsh`) and **pnpm** on PATH. `dsh plugin add` runs pnpm in `$DSH_HOME/profiles/web`. This repo commits built `lib/`, so a git install does not need `prepare` or a profile `allowBuilds` entry.
+
+Then restart that Host and reload the page. `dsh plugin add` writes the profile. It does not hot-load a running process.
+
+Adds a **阅读** tab to DeepSeek Harness. While a turn runs you see steps, thinking, and progress. After a successful turn those collapse and the final answer stays. Native Chat / Trajectory, the composer, model picker, tools, and approvals stay. The reading column keeps ChatView's `data-chat-flow` hook so third-party skins that gate the composer on that mark still treat Reader as an interactive conversation.
+
+Live turns **fold as they run**: process rows collapse into one counted summary line with a choreographed shrink, and that summary stays expandable after the turn closes. While an answer or confirmation is pending, the status line counts up from the latest human input; user messages and turn ends carry a local clock and duration.
+
+A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/). Settings → **Better Display** can preview deliverables in the right Sidebar (system app remains the default) and reports whether that skill is installed in a harness skill root.
+
+Targets DeepSeek Harness **0.1.6-alpha.2**. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`. New sessions default to reading.
+
+From a local checkout or tarball:
 
 ```sh
-dsh plugin --profile web add /path/to/dsh-better-display
+dsh plugin --profile web add ./dsh-better-display
+dsh plugin --profile web add ./dsh-better-display-0.3.0.tgz
 ```
 
-First install does not restart DSH. Reload the Web page and pick 阅读. New sessions default to reading.
-
-To update:
+`dsh.bundle` is captured at Host boot. Do not also insert the same row by hand in the profile `cordis.patch.yml`, or it will mount twice.
 
 ```sh
-git pull
-npm run build
-```
-
-Then reload the browser.
-
-### Developing inside a Harness checkout (optional)
-
-If you also maintain the DeepSeek Harness source, the `dshx` flow still works and adds the official bundle-purity check:
-
-```sh
-export DSHX_HARNESS=/absolute/path/to/deepseek-harness
-node scripts/link-harness-dependencies.mjs "$DSHX_HARNESS"
-npm test
-DSHX_HARNESS="$DSHX_HARNESS" npx tsdown   # uses the repo-root tsdown.config.ts
+dsh plugin --profile web remove dsh-better-display
 ```
 
 ## Develop
@@ -68,6 +50,17 @@ the official `client-build.mjs` contract: the browser half is a lazy-CJS bundle 
 `dsh-client-ui-primitives`, …) or that `package.json` declares in `dsh.client.inject` stays
 external and is never inlined — React, the slot registry, and the store engine must remain
 single-instance.
+
+### Developing inside a Harness checkout (optional)
+
+If you also maintain the DeepSeek Harness source, the `dshx` flow still works and adds the official bundle-purity check:
+
+```sh
+export DSHX_HARNESS=/absolute/path/to/deepseek-harness
+node scripts/link-harness-dependencies.mjs "$DSHX_HARNESS"
+npm test
+DSHX_HARNESS="$DSHX_HARNESS" npx tsdown   # uses the repo-root tsdown.config.ts
+```
 
 ## License
 

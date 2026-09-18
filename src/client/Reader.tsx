@@ -9,7 +9,7 @@ import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
-import { assistantSegments, boundaryOf, forkAnchorSeq, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
+import { assistantSegments, boundaryOf, forkAnchorSeq, runningIndicator, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
 import { basename, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
 import { asReadonlyArray, pendingSubmissionImages, type PendingSubmissionEcho } from './pending-submission.js';
@@ -632,6 +632,19 @@ export function Reader(props: ReaderProps) {
 
     return false;
   }, [running, pendingList, order, nodes, groups, timeline]);
+  // The reader must never be silent while the agent is working; see
+  // `runningIndicator` for why the waiting indicator is the fallback for every
+  // running state whose last turn is not open.
+  const lastStatusGroup = groups.at(-1);
+  const lastStatusTurn = lastStatusGroup === undefined || lastStatusGroup.turn === null
+    ? undefined
+    : timeline.turns.get(lastStatusGroup.turn);
+  const statusMode = runningIndicator({
+    running,
+    awaitingModel: isAwaitingModel,
+    lastTurnStatus: boundaryOf(lastStatusTurn).status,
+  });
+  const showWaitingStatus = statusMode === 'waiting';
   const scroll = useReadingScroll(root, motion);
   const pinnedKeys = usePinnedSelection(root);
   const selectedProcessKeys = usePinnedSelection(root, '[data-reader-process]');
@@ -802,7 +815,7 @@ export function Reader(props: ReaderProps) {
         </div>
         );
       })}
-      {isAwaitingModel && <WaitingStatus anchor={waitAnchor} label={props.t ? props.t('chat.deepDiving') : '深度求索中...'} />}
+      {showWaitingStatus && <WaitingStatus anchor={waitAnchor} label={props.t ? props.t('chat.deepDiving') : '深度求索中...'} />}
       {pending !== undefined && <div className={css.attention} role="alert" data-reader-attention>
         <strong>{pending.kind === 'question' ? '需要你回答一个问题' : '需要你的确认'}</strong>
         <span>请在下方原生操作区处理。此提示不会收进执行过程。</span>

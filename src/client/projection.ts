@@ -102,6 +102,30 @@ export function terminalLabel(reason: string | null): string | null {
 }
 
 /**
+ * Which running indicator the reading view must show.
+ *
+ * Native Chat renders one running label whenever the Session is running. This
+ * view splits that label: an open turn draws its own process status, and the
+ * waiting indicator covers everything the per-turn status cannot. Choosing
+ * `'waiting'` is therefore the fallback for *every* running state whose last
+ * turn is not open — no groups yet, the turn outside the timeline window,
+ * an unknown boundary, a closed last turn while the next one starts, or a
+ * brand-new Session whose nodes have not arrived. Returning `'none'` here
+ * would blank the view right after sending, which reads as a dropped reply.
+ *
+ * @param state - running flag, awaiting-model predicate, and the last turn's status.
+ * @returns `'turn'` when the last open turn draws its own status, `'waiting'` when the waiting indicator stands in, `'none'` when idle.
+ */
+export function runningIndicator(state: {
+  running: boolean;
+  awaitingModel: boolean;
+  lastTurnStatus: 'open' | 'closed' | 'unknown' | undefined;
+}): 'turn' | 'waiting' | 'none' {
+  if (!state.running) return 'none';
+  return state.lastTurnStatus === 'open' && !state.awaitingModel ? 'turn' : 'waiting';
+}
+
+/**
  * Extract the first usable fork anchor seq from candidate message nodes.
  * Only the durable closing message seq cuts the intended turn prefix: an
  * absent anchor must surface as undefined (never as 0 or NaN), because the

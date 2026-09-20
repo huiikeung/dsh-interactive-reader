@@ -5,7 +5,7 @@
 推荐用 npm（可钉版本）：
 
 ```sh
-dsh plugin --profile web add dsh-better-display@0.4.0
+dsh plugin --profile web add dsh-better-display@0.5.0
 ```
 
 也可以装 latest：
@@ -30,6 +30,8 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 工具过程里改过文件的调用会带上 `+A -R` 统计，点开是每个文件一个页签的差异面板；注册在宿主 `tool.call.toolview` 槽位里的第三方工具卡片也会直接渲染在阅读页。设置里的 **Better Display** 还有半透明毛玻璃与三档自动折叠强度。
 
+产物芯片上的「在文件夹中显示」按**宿主自己的回答**走：macOS / Windows 用访达 / 资源管理器定位，有桌面的 Linux 打开所在目录；没有桌面的宿主（比如 NAS）会在右侧栏打开一个目录面板；在设置里填上 fnOS 文件管理器地址模板后直接跳到 NAS 文件管理器；以上都不可用时复制目录的绝对路径并如实说明，不会再假装成功。
+
 最终回答里的 ````mcp-app` 代码块会在阅读视图里挂成交互卡片，跑在 `<iframe sandbox="allow-scripts allow-forms">` 里，没有 `allow-same-origin`。卡片可以通过 JSON-RPC 把下一轮 prompt 填进输入框。技能包在 [`skills/generative-mcpapps/`](skills/generative-mcpapps/)。设置里的 **Better Display** 可把产物改为右侧栏预览（默认仍用系统应用），打开半透明毛玻璃（默认关），设置过程自动折叠开关（默认开），并检测该技能是否已装进宿主技能目录。
 
 面向 DeepSeek Harness **0.1.6-alpha.2**。只改展示，不改 Agent 执行、SDK 或模型凭据。Node.js `^22.19.0 || >=24`。新会话默认进阅读。
@@ -38,7 +40,7 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 ```sh
 dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.4.0.tgz
+dsh plugin --profile web add ./dsh-better-display-0.5.0.tgz
 ```
 
 `dsh.bundle` 是开机捕获的。不要再往 profile 的 `cordis.patch.yml` 手写同一条 insert，会重复挂载。

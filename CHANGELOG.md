@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.5.0
+
+Makes「在文件夹中显示」work everywhere instead of only on macOS and Windows, and gives
+it a real target on this headless fnOS NAS.
+
+### Why it was broken
+
+- The plugin's own host route branched on `darwin` (`open -R`) and `win32`
+  (`explorer /select`) and sent everything else to `xdg-open <file>`. On a NAS there is
+  no `DISPLAY`/`WAYLAND_DISPLAY`, so that command spawns into nothing — and it was the
+  wrong path anyway, because revealing means the *parent* directory.
+- The route answered `{ ok: true }` whether or not an opener could ever work, so the
+  chip flashed「已定位」while nothing happened.
+- The tooltip was hard-coded to macOS (「在访达中定位所在目录」).
+
+### Use the Host's own contract
+
+- Capability now comes from the official `GET /api/present.host`
+  (`sessionController.workspaceDesktop()`), which answers
+  `{ name, available, fileManager }`; on this box that is
+  `{ name: "MEmini-NAS", available: false, fileManager: "directory" }`.
+  `session.canOpenWorkspacePath()` is the fallback for Hosts without the route. One
+  memoized probe is shared by every chip.
+- The reveal itself goes through `session.openWorkspacePath({ path, action: 'reveal' })`,
+  so Finder selects the file, Explorer selects it, and a desktop Linux Host opens its
+  parent — the Host owns the platform difference.
+- The plugin's `/better-display/reveal` route and its `child_process` spawn are gone.
+- Wording follows the Host's own `fileManager` (访达 / 文件资源管理器 / 文件管理器).
+
+### What each Host does now
+
+1. **A configured fnOS file-manager URL** (Settings, optional) wins when the folder is
+   inside fnOS's own `/vol{n}/…` space: it opens in a new tab, synchronously inside the
+   click so the user gesture survives. Placeholders are `{path}`, `{encodedPath}` and
+   `{name}`; a template without a path placeholder is refused rather than silently
+   opening the file manager's home screen.
+2. **A Host with a desktop** uses its own opener as above.
+3. **A Host without a desktop** opens the new right-sidebar **folder pane**.
+4. If the pane cannot be opened either, the absolute folder path is copied and the chip
+   says so (「复制所在目录路径（<host> 没有桌面环境）」) — never a success tick for
+   something that did not happen. Copying works on the LAN HTTP origin too, where
+   `navigator.clipboard` does not exist and `execCommand` is the fallback.
+
+### The folder pane
+
+DSH cannot point its own files tree at a path — that type is a builtin page with no
+`patterns`/`canOpen`, so it is never an address candidate, and its root comes from the
+session rather than from the open call. So the plugin ships its own address-routed tab
+type (`dsh-resource://better-display-folder/…`, the only scheme the shell routes),
+registers its body under `sidebar.right.pane.tab` keyed by the type id, and reads the
+address through the seat-injected `useTabInfo()`. Content comes from the official
+`workspaceFiles.list` Remote, which keeps listings workspace-scoped and capped, so the
+pane adds no read route of its own.
+
+Directories list first with sizes, a folder button opens the shell's own file preview,
+and an up-button walks to the parent. The registrations are skipped when the shell has
+no tab registry, which degrades to copying the path instead of failing the plugin.
+
+### Verified on this host
+
+- Empty template: chip label「复制所在目录路径（MEmini-NAS没有桌面环境）」, and the
+  click leaves `/vol1/1000/…/src/client` on the clipboard.
+- Configured template: the click opens exactly
+  `…/trim.file-manager?path=%2Fvol1%2F1000%2F…%2Fsrc%2Fclient&name=client`.
+- No template: the click opens the pane on that folder (61 entries: 2 directories,
+  59 files, with sizes) and walking into `markdown` re-roots it.
+- 170 regression tests; the new ones cover the desktop payload, the `/vol{n}` space
+  check, template expansion, branch order, and the pane's address grammar and ordering.
+
 ## 0.4.0
 
 Merges upstream `aa2246740/dsh-better-display` main (`066f10a`, released there as v0.2.1) on top of

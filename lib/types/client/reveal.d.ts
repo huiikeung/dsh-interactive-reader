@@ -35,7 +35,7 @@ export interface RevealDesktop {
  */
 export declare const UNKNOWN_DESKTOP: RevealDesktop;
 /** Result of a reveal attempt, so the chip can report what really happened. */
-export type RevealOutcome = 'external' | 'fnos' | 'copied' | 'failed';
+export type RevealOutcome = 'external' | 'fnos' | 'sidebar' | 'copied' | 'failed';
 /**
  * Read the official `workspaceDesktop()` payload into a desktop description.
  *
@@ -80,6 +80,9 @@ export type RevealPlan = {
     kind: 'native';
     label: string;
 } | {
+    kind: 'sidebar';
+    label: string;
+} | {
     kind: 'probe';
     label: string;
 } | {
@@ -94,12 +97,15 @@ export declare function fileManagerName(fileManager: RevealFileManager): string;
  * Decide the target without performing it.
  *
  * The fnOS branch wins whenever a template maps, because it is the only target a
- * headless NAS can honour; `desktop` may be omitted, which yields {@link RevealPlan}
- * `probe` so the caller can ask the Host and re-plan.
+ * headless NAS can honour. `desktop` may be omitted, which yields
+ * {@link RevealPlan} `probe` so the caller can ask the Host and re-plan. When the
+ * Host has no desktop, `paneAvailable` selects the plugin's own right-sidebar folder
+ * pane — the last target that still shows something on a headless Host.
  */
 export declare function revealPlanFor(args: {
     folderPath: string;
     template: string;
     desktop?: RevealDesktop;
+    paneAvailable?: boolean;
 }): RevealPlan;
 //# sourceMappingURL=reveal.d.ts.map

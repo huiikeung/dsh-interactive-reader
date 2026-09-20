@@ -5,7 +5,7 @@
 Prefer npm (version-pinable):
 
 ```sh
-dsh plugin --profile web add dsh-better-display@0.4.0
+dsh plugin --profile web add dsh-better-display@0.5.0
 ```
 
 Or latest:
@@ -30,6 +30,8 @@ Live turns **fold as they run**: process rows collapse into one counted summary 
 
 Tool calls that changed files carry `+A -R` statistics and open a per-file diff panel, and third-party tool cards registered in the host's `tool.call.toolview` slot render inside the reading view. Settings → **Better Display** also holds the translucent frosted glass toggle and a three-stop auto-fold intensity.
 
+"Show in folder" on a deliverable chip follows **the Host's own answer**: Finder or Explorer on macOS and Windows, the containing directory on a desktop Linux, a folder pane in the right Sidebar on a Host with no desktop (a NAS), and the NAS file manager itself once you fill in its URL template in Settings. When none of those can work, the absolute folder path is copied and the chip says so instead of pretending.
+
 A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/). Settings → **Better Display** can preview deliverables in the right Sidebar (system app remains the default), turn on translucent frosted glass (off by default), toggle process auto-folding (On is the default), and reports whether that skill is installed in a harness skill root.
 
 Targets DeepSeek Harness **0.1.6-alpha.2**. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`. New sessions default to reading.
@@ -38,7 +40,7 @@ From a local checkout or tarball:
 
 ```sh
 dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.4.0.tgz
+dsh plugin --profile web add ./dsh-better-display-0.5.0.tgz
 ```
 
 `dsh.bundle` is captured at Host boot. Do not also insert the same row by hand in the profile `cordis.patch.yml`, or it will mount twice.

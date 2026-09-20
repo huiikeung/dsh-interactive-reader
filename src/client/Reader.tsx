@@ -305,7 +305,7 @@ function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pi
 
 type ChipStatus = 'idle' | 'opened' | 'copied' | 'revealed' | 'revealCopied' | 'failed';
 
-const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, revealDesktop, revealTemplate, openMode }: {
+const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, revealDesktop, revealTemplate, revealPaneAvailable, openMode }: {
   path: string;
   openFile?: (path: string) => Promise<void> | void;
   revealFile?: (path: string) => Promise<RevealOutcome>;
@@ -313,6 +313,8 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
   revealDesktop?: RevealDesktop;
   /** The configured fnOS file-manager template, if any. */
   revealTemplate?: string;
+  /** Whether the right-sidebar folder pane can be opened in this shell. */
+  revealPaneAvailable?: boolean;
   openMode: DeliverableOpenMode;
 }) {
   const [status, setStatus] = useState<ChipStatus>('idle');
@@ -350,7 +352,7 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
         const outcome = await revealFile(path);
         // 'copied' is a real outcome, not a failure: the Host has no desktop, so the
         // folder path is what the user can actually act on.
-        flash(outcome === 'external' || outcome === 'fnos'
+        flash(outcome === 'external' || outcome === 'fnos' || outcome === 'sidebar'
           ? 'revealed'
           : outcome === 'copied' ? 'revealCopied' : 'failed');
       } catch {
@@ -369,8 +371,8 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
   const name = basename(path);
   const folder = dirname(path);
   const plan = useMemo(
-    () => revealPlanFor({ folderPath: folder, template: revealTemplate ?? '', desktop: revealDesktop }),
-    [folder, revealTemplate, revealDesktop],
+    () => revealPlanFor({ folderPath: folder, template: revealTemplate ?? '', desktop: revealDesktop, paneAvailable: revealPaneAvailable }),
+    [folder, revealTemplate, revealDesktop, revealPaneAvailable],
   );
   const revealTitle = status === 'revealCopied'
     ? `已复制目录路径：${folder}`
@@ -454,12 +456,13 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
   );
 });
 
-function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDesktop, fnosFileManagerTemplate, openMode }: {
+function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDesktop, fnosFileManagerTemplate, revealPaneAvailable, openMode }: {
   deliverables: readonly string[];
   openFile?: (path: string) => Promise<void> | void;
   revealFile?: (path: string) => Promise<RevealOutcome>;
   probeRevealDesktop?: () => Promise<RevealDesktop>;
   fnosFileManagerTemplate?: () => string;
+  revealPaneAvailable?: boolean;
   openMode: DeliverableOpenMode;
 }) {
   const [folderStatus, setFolderStatus] = useState<ChipStatus>('idle');
@@ -492,7 +495,7 @@ function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDeskto
     }
     void (async () => {
       const outcome = await revealFile('.');
-      settle(outcome === 'external' || outcome === 'fnos'
+      settle(outcome === 'external' || outcome === 'fnos' || outcome === 'sidebar'
         ? 'revealed'
         : outcome === 'copied' ? 'revealCopied' : 'failed');
     })();
@@ -522,6 +525,7 @@ function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDeskto
               revealFile={revealFile}
               revealDesktop={desktop}
               revealTemplate={template}
+              revealPaneAvailable={revealPaneAvailable}
               openMode={openMode}
             />
           ))}
@@ -629,6 +633,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     openFile: props.openFile,
     revealFile: props.revealFile,
     probeRevealDesktop: props.probeRevealDesktop,
+    revealPaneAvailable: props.revealPaneAvailable?.(),
     forkAt: props.forkAt,
     forkSeq,
     fileMentions,
@@ -681,7 +686,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     {!hasProcess && boundary.status === 'open' && !isAwaitingModel && <div className={css.disclosure} data-reader-status-only>
       <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />
     </div>}
-    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} probeRevealDesktop={props.probeRevealDesktop} fnosFileManagerTemplate={props.fnosFileManagerTemplate} openMode={openMode} />}
+    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} probeRevealDesktop={props.probeRevealDesktop} fnosFileManagerTemplate={props.fnosFileManagerTemplate} revealPaneAvailable={props.revealPaneAvailable?.()} openMode={openMode} />}
     {showTerminalNotice && <div className={css.notice} data-reader-terminal>{terminal}</div>}
   </section>;
 });
@@ -889,7 +894,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.4.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.5.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

@@ -120,3 +120,33 @@ test('a template that cannot map falls through to the Host answer', () => {
   });
   assert.equal(outside.kind, 'native', 'a non-NAS path must not be sent to the NAS');
 });
+
+test('with a pane available, a headless Host still shows the folder', () => {
+  const plan = revealPlanFor({
+    folderPath: '/vol1/1000/docs',
+    template: '',
+    desktop: FNOS_DESKTOP,
+    paneAvailable: true,
+  });
+  assert.equal(plan.kind, 'sidebar', 'the pane is the last target that displays anything without a desktop');
+  assert.match(plan.label, /右侧栏/);
+});
+
+test('a desktop Host prefers its own file manager over the pane', () => {
+  assert.equal(
+    revealPlanFor({ folderPath: '/Users/me/docs', template: '', desktop: MAC_DESKTOP, paneAvailable: true }).kind,
+    'native',
+  );
+});
+
+test('the fnOS template still outranks both the opener and the pane', () => {
+  assert.equal(
+    revealPlanFor({
+      folderPath: '/vol1/1000/docs',
+      template: 'http://nas:5666/v/trim.file-manager?path={path}',
+      desktop: MAC_DESKTOP,
+      paneAvailable: true,
+    }).kind,
+    'fnos',
+  );
+});

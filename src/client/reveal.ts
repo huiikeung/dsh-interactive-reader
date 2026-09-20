@@ -41,7 +41,7 @@ export interface RevealDesktop {
 export const UNKNOWN_DESKTOP: RevealDesktop = { name: undefined, available: false, fileManager: null };
 
 /** Result of a reveal attempt, so the chip can report what really happened. */
-export type RevealOutcome = 'external' | 'fnos' | 'copied' | 'failed';
+export type RevealOutcome = 'external' | 'fnos' | 'sidebar' | 'copied' | 'failed';
 
 const FILE_MANAGERS: readonly RevealFileManager[] = ['finder', 'explorer', 'directory', null];
 
@@ -112,6 +112,7 @@ export function fnosRevealUrl(folderPath: string, template: string): string | nu
 export type RevealPlan =
   | { kind: 'fnos'; url: string; label: string }
   | { kind: 'native'; label: string }
+  | { kind: 'sidebar'; label: string }
   | { kind: 'probe'; label: string }
   | { kind: 'copy'; label: string };
 
@@ -133,13 +134,16 @@ export function fileManagerName(fileManager: RevealFileManager): string {
  * Decide the target without performing it.
  *
  * The fnOS branch wins whenever a template maps, because it is the only target a
- * headless NAS can honour; `desktop` may be omitted, which yields {@link RevealPlan}
- * `probe` so the caller can ask the Host and re-plan.
+ * headless NAS can honour. `desktop` may be omitted, which yields
+ * {@link RevealPlan} `probe` so the caller can ask the Host and re-plan. When the
+ * Host has no desktop, `paneAvailable` selects the plugin's own right-sidebar folder
+ * pane — the last target that still shows something on a headless Host.
  */
 export function revealPlanFor(args: {
   folderPath: string;
   template: string;
   desktop?: RevealDesktop;
+  paneAvailable?: boolean;
 }): RevealPlan {
   const url = fnosRevealUrl(args.folderPath, args.template);
   if (url !== null) {
@@ -150,6 +154,9 @@ export function revealPlanFor(args: {
   }
   if (args.desktop.available) {
     return { kind: 'native', label: `在${fileManagerName(args.desktop.fileManager)}中显示所在目录 (${args.folderPath})` };
+  }
+  if (args.paneAvailable) {
+    return { kind: 'sidebar', label: `在右侧栏打开所在目录 (${args.folderPath})` };
   }
   return { kind: 'copy', label: `复制所在目录路径（${args.desktop.name ?? '宿主'}没有桌面环境）` };
 }

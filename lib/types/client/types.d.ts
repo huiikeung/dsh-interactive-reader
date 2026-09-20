@@ -61,6 +61,8 @@ export interface ReaderInjected {
     probeRevealDesktop?: () => Promise<import('./reveal.js').RevealDesktop>;
     /** The configured fnOS file-manager URL template, read fresh on every reveal. */
     fnosFileManagerTemplate?: () => string;
+    /** Whether the right-sidebar folder pane can be opened at all in this shell. */
+    revealPaneAvailable?: () => boolean;
     /** Fork the conversation at a specific message sequence into a new branch session. */
     forkAt?: (seq: number) => void;
     /** Load session history through a target sequence number. */

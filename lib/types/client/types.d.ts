@@ -48,10 +48,19 @@ export interface ReaderInjected {
             setAutoFold?: (value: boolean) => void;
             setFrostedGlass?: (value: boolean) => void;
             setDeliverableOpenMode?: (value: import('./open-file.js').DeliverableOpenMode) => void;
+            setFnosFileManagerUrl?: (value: string) => void;
         };
     };
-    /** Reveal and highlight a workspace file in macOS Finder or Windows Explorer. */
-    revealFile?: (path: string) => Promise<void> | void;
+    /**
+     * Show a produced file in its folder and report what actually happened: the
+     * Host's own file manager, a configured fnOS file-manager URL, or the absolute
+     * folder path copied to the clipboard when the Host has no desktop.
+     */
+    revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
+    /** Ask the Host what it can do natively; memoized, so many chips share one call. */
+    probeRevealDesktop?: () => Promise<import('./reveal.js').RevealDesktop>;
+    /** The configured fnOS file-manager URL template, read fresh on every reveal. */
+    fnosFileManagerTemplate?: () => string;
     /** Fork the conversation at a specific message sequence into a new branch session. */
     forkAt?: (seq: number) => void;
     /** Load session history through a target sequence number. */
@@ -62,7 +71,9 @@ export interface ReaderInjected {
 export type ReaderProps = PropsRuntime<'conversation.view'> & PropsLocale<'chat'> & PropsRenderSlots<'dsh-better-display.block'> & PropsStore<ReturnType<typeof createReaderStore>> & ReaderInjected;
 export type BlockRenderProps = Pick<ReaderProps, 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView'> & {
     openFile?: (path: string) => Promise<void> | void;
-    revealFile?: (path: string) => Promise<void> | void;
+    revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
+    /** The Host's own view of what it can open natively; shared, memoized probe. */
+    probeRevealDesktop?: () => Promise<import('./reveal.js').RevealDesktop>;
     forkAt?: (seq: number) => void;
     /** Durable closing-message seq of this turn (turn-tail closing), used as the fork anchor. */
     forkSeq?: number;

@@ -8,6 +8,8 @@ export interface ReaderPrefsSnapshot {
     foldIntensity?: FoldIntensity;
     autoFold?: boolean;
     processOnly?: boolean;
+    /** fnOS file-manager URL template; empty means "use the Host opener only". */
+    fnosFileManagerUrl?: string;
 }
 export interface OpenPrefs {
     getSnapshot: () => ReaderPrefsSnapshot;
@@ -17,6 +19,7 @@ export interface OpenPrefs {
         setFrostedGlass: (value: boolean) => void;
         setFoldIntensity?: (value: FoldIntensity) => void;
         setAutoFold?: (value: boolean) => void;
+        setFnosFileManagerUrl?: (value: string) => void;
     };
 }
 export interface BetterDisplaySettingsInjected {

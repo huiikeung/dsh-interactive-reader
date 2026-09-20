@@ -3,7 +3,6 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import { resolveWorkspacePath } from '@deepseek-ai/dsh-util-workspace-path';
 import * as workspacePathPkg from '@deepseek-ai/dsh-util-workspace-path';
-import { dirname } from './deliverables.js';
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
 import { Reader } from './Reader.js';
@@ -12,6 +11,15 @@ import { installReaderEntry } from './entry.js';
 import { installBetterDisplaySettings } from './settings.js';
 import { fillComposerDom } from './mcp-app.js';
 import { fileAddressFor, modeFromSnapshot, openDeliverableFile } from './open-file.js';
+import { copyToClipboard } from './clipboard.js';
+import {
+  UNKNOWN_DESKTOP,
+  desktopFromHost,
+  revealFolderOf,
+  revealPlanFor,
+  type RevealDesktop,
+  type RevealOutcome,
+} from './reveal.js';
 import type { ReaderInjected } from './types.js';
 
 /** Structural face of the sanctioned per-session composer writer. */
@@ -33,18 +41,82 @@ const officialFileAddressFor = (workspacePathPkg as {
 async function openWorkspacePath(
   ctx: Context,
   path: string,
-): Promise<void> {
-  const remote = ctx.remote as unknown as { session?: { openWorkspacePath: (arg: { path: string }) => Promise<{ ok: boolean; error?: { message: string } }> } } | undefined;
+  action?: 'reveal',
+): Promise<boolean> {
+  const remote = ctx.remote as unknown as { session?: { openWorkspacePath: (arg: { path: string; action?: 'reveal' }) => Promise<{ ok: boolean; error?: { message: string } }> } } | undefined;
   const remoteSession = remote?.session
-    ?? (ctx.get?.('remote.session') as unknown as { openWorkspacePath: (arg: { path: string }) => Promise<{ ok: boolean; error?: { message: string } }> } | undefined)
-    ?? ((ctx.get?.('remote') as unknown as { session?: { openWorkspacePath: (arg: { path: string }) => Promise<{ ok: boolean; error?: { message: string } }> } })?.session);
-  if (remoteSession?.openWorkspacePath) {
-    const result = await remoteSession.openWorkspacePath({ path });
-    if (!result?.ok) {
-      console.warn('[dsh-better-display] openWorkspacePath failed:', result?.error?.message);
-    }
-  } else {
+    ?? (ctx.get?.('remote.session') as unknown as { openWorkspacePath: (arg: { path: string; action?: 'reveal' }) => Promise<{ ok: boolean; error?: { message: string } }> } | undefined)
+    ?? ((ctx.get?.('remote') as unknown as { session?: { openWorkspacePath: (arg: { path: string; action?: 'reveal' }) => Promise<{ ok: boolean; error?: { message: string } }> } })?.session);
+  if (!remoteSession?.openWorkspacePath) {
     console.warn('[dsh-better-display] remote.session is not available');
+    return false;
+  }
+  const result = await remoteSession.openWorkspacePath(action === undefined ? { path } : { path, action });
+  if (!result?.ok) {
+    console.warn('[dsh-better-display] openWorkspacePath failed:', result?.error?.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Ask the Host what it can do with a produced path.
+ *
+ * The official `GET /api/present.host` route answers
+ * `sessionController.workspaceDesktop()` — `{ name, available, fileManager }` — which is
+ * exactly the question「在文件夹中显示」has to answer honestly: a headless NAS reports
+ * `available: false` with `fileManager: "directory"`, where a hand-rolled `xdg-open`
+ * silently spawned into nothing and reported success. Hosts without the route fall back
+ * to the Session remote's own `canOpenWorkspacePath`.
+ *
+ * Memoized: the answer is a property of the Host, and every chip shares one request.
+ */
+let desktopProbe: Promise<RevealDesktop> | undefined;
+function probeRevealDesktop(ctx: Context): Promise<RevealDesktop> {
+  desktopProbe ??= (async (): Promise<RevealDesktop> => {
+    try {
+      const res = await fetch('/api/present.host', {
+        headers: { accept: 'application/json' },
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        const payload: unknown = await res.json();
+        const desktop = desktopFromHost(payload);
+        if (desktop.available || desktop.fileManager !== null) return desktop;
+      }
+    } catch {
+      // Route absent on an older Host: fall through to the Session remote.
+    }
+    try {
+      const remote = ctx.remote as unknown as { session?: { canOpenWorkspacePath?: () => Promise<{ ok: boolean; value?: boolean }> } } | undefined;
+      const answer = await remote?.session?.canOpenWorkspacePath?.();
+      if (answer?.ok === true) {
+        return { name: undefined, available: answer.value === true, fileManager: null };
+      }
+    } catch {
+      // No answer at all: stay with the honest default.
+    }
+    return UNKNOWN_DESKTOP;
+  })();
+  return desktopProbe;
+}
+
+/** Open a URL in a new tab, reporting whether the browser actually took it. */
+function openInNewTab(url: string): boolean {
+  try {
+    if (typeof window === 'undefined') return false;
+    return window.open(url, '_blank', 'noopener,noreferrer') !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** Read the configured fnOS file-manager template, tolerating a broken store read. */
+function fnosTemplateOf(prefs: { getSnapshot?: () => { fnosFileManagerUrl?: string } }): string {
+  try {
+    return prefs.getSnapshot?.()?.fnosFileManagerUrl ?? '';
+  } catch {
+    return '';
   }
 }
 
@@ -77,6 +149,8 @@ export function apply(ctx: Context): void {
       };
       return {
         openPrefs: prefs,
+        probeRevealDesktop: () => probeRevealDesktop(ctx),
+        fnosFileManagerTemplate: () => fnosTemplateOf(prefs),
         loadOlder: async () => { await session().loadOlder(); },
         loadImage: async attachment => {
           const receipt = await session().readAttachment(attachment.attachmentId);
@@ -107,35 +181,31 @@ export function apply(ctx: Context): void {
             console.warn('[dsh-better-display] openFile error:', error);
           }
         },
-        revealFile: async (path: string) => {
+        revealFile: async (path: string): Promise<RevealOutcome> => {
           try {
             const cwd = ctx.sessions?.list?.getSnapshot?.()?.byId[sessionId]?.cwd;
             const targetPath = resolveWorkspacePath(cwd, path);
-            // 1. Try dedicated host endpoint for native file highlighting (open -R / explorer /select)
-            try {
-              const res = await fetch('/better-display/reveal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ path: targetPath }),
-              });
-              if (res.ok) {
-                const data = await res.json();
-                if (data.ok) return;
-              }
-            } catch {
-              // Server endpoint not yet available, fallback to directory open
-            }
+            const folder = revealFolderOf(targetPath);
+            const template = fnosTemplateOf(prefs);
 
-            // 2. Fallback to official opener with parent directory
-            const parentDir = dirname(targetPath);
-            const remote = ctx.remote as unknown as { session?: { openWorkspacePath: (arg: { path: string }) => Promise<{ ok: boolean; error?: { message: string } }> } } | undefined;
-            const remoteSession = remote?.session
-              ?? (ctx.get?.('remote.session') as unknown as { openWorkspacePath: (arg: { path: string }) => Promise<{ ok: boolean; error?: { message: string } }> } | undefined);
-            if (remoteSession?.openWorkspacePath) {
-              await remoteSession.openWorkspacePath({ path: parentDir });
+            // The fnOS target is opened before any `await`, so the click's own user
+            // gesture is still current and no popup blocker eats the new tab.
+            let plan = revealPlanFor({ folderPath: folder, template });
+            if (plan.kind === 'fnos' && openInNewTab(plan.url)) return 'fnos';
+            if (plan.kind === 'probe' || plan.kind === 'fnos') {
+              // Either there was nothing to ask, or the fnOS jump was refused; from
+              // here the Host is the only remaining target, so its template is dropped.
+              plan = revealPlanFor({ folderPath: folder, template: '', desktop: await probeRevealDesktop(ctx) });
             }
+            if (plan.kind === 'native') {
+              // The Host decides what "reveal" means per platform: Finder selects the
+              // file, Explorer selects it, and a desktop Linux Host opens its parent.
+              if (await openWorkspacePath(ctx, targetPath, 'reveal')) return 'external';
+            }
+            return await copyToClipboard(folder) ? 'copied' : 'failed';
           } catch (error) {
             console.warn('[dsh-better-display] revealFile error:', error);
+            return 'failed';
           }
         },
         forkAt: (seq: number) => {

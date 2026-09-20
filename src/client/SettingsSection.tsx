@@ -11,6 +11,8 @@ export interface ReaderPrefsSnapshot {
   foldIntensity?: FoldIntensity;
   autoFold?: boolean;
   processOnly?: boolean;
+  /** fnOS file-manager URL template; empty means "use the Host opener only". */
+  fnosFileManagerUrl?: string;
 }
 
 export interface OpenPrefs {
@@ -21,6 +23,7 @@ export interface OpenPrefs {
     setFrostedGlass: (value: boolean) => void;
     setFoldIntensity?: (value: FoldIntensity) => void;
     setAutoFold?: (value: boolean) => void;
+    setFnosFileManagerUrl?: (value: string) => void;
   };
 }
 
@@ -65,6 +68,8 @@ export function SettingsSection(props: SettingsProps) {
   const mode = deliverableOpenModeOf(snap.deliverableOpenMode);
   const glass = frostedGlassOf(snap);
   const autoFold = snap.autoFold !== false && snap.foldIntensity !== 0;
+  const [fnosUrl, setFnosUrl] = useState(snap.fnosFileManagerUrl ?? '');
+  useEffect(() => { setFnosUrl(snap.fnosFileManagerUrl ?? ''); }, [snap.fnosFileManagerUrl]);
   const setMode = (value: DeliverableOpenMode) => {
     props.prefs.actions.setDeliverableOpenMode(value);
   };
@@ -143,6 +148,25 @@ export function SettingsSection(props: SettingsProps) {
           }}
         />
       </div>
+
+      <section className={css.block} data-better-display-fnos data-fnos-configured={fnosUrl.trim() !== '' || undefined}>
+        <div className={css.title}>{text(props, copy, 'fnosTitle')}</div>
+        <p className={css.desc}>{text(props, copy, 'fnosDescription')}</p>
+        <input
+          type="url"
+          className={css.input}
+          value={fnosUrl}
+          spellCheck={false}
+          autoComplete="off"
+          aria-label={text(props, copy, 'fnosTitle')}
+          placeholder={text(props, copy, 'fnosPlaceholder')}
+          onChange={event => {
+            setFnosUrl(event.target.value);
+            props.prefs.actions.setFnosFileManagerUrl?.(event.target.value);
+          }}
+        />
+        <p className={css.hint}>{text(props, copy, 'fnosTokens')}</p>
+      </section>
 
       <section className={css.block} data-better-display-skill={skill?.installed ? 'installed' : 'missing'}>
         <div className={css.title}>{text(props, copy, 'skillTitle')}</div>

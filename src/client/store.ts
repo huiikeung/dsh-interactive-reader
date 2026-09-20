@@ -24,6 +24,13 @@ export interface ReaderState {
   frostedGlass: boolean;
   /** Derived from foldIntensity === 2; kept for older #14 snapshots. */
   processOnly: boolean;
+  /**
+   * Optional fnOS file-manager URL template used by「在文件夹中显示」. Empty means
+   * "always use the Host's own opener", which a headless NAS cannot honour; filling
+   * it in is how a NAS user reaches a real file manager. Placeholders: `{path}`,
+   * `{encodedPath}`, `{name}`.
+   */
+  fnosFileManagerUrl: string;
 }
 type ReaderActions = {
   setExpanded: (draft: ReaderState, key: string, value: boolean) => void;
@@ -32,6 +39,7 @@ type ReaderActions = {
   setDeliverableOpenMode: (draft: ReaderState, value: DeliverableOpenMode) => void;
   setFoldIntensity: (draft: ReaderState, value: FoldIntensity) => void;
   setFrostedGlass: (draft: ReaderState, value: boolean) => void;
+  setFnosFileManagerUrl: (draft: ReaderState, value: string) => void;
 };
 
 function applyFoldIntensity(draft: ReaderState, value: FoldIntensity): void {
@@ -64,6 +72,7 @@ export function createReaderStore(): EngineStoreHandle<ReaderState, ReaderAction
       foldIntensity: FOLD_INTENSITY_DEFAULT,
       frostedGlass: false,
       processOnly: false,
+      fnosFileManagerUrl: '',
     }),
     persist: 'dsh.reader.v1',
     actions: {
@@ -77,6 +86,7 @@ export function createReaderStore(): EngineStoreHandle<ReaderState, ReaderAction
       setDeliverableOpenMode: (draft, value: DeliverableOpenMode) => { draft.deliverableOpenMode = value; },
       setFoldIntensity: (draft, value: FoldIntensity) => { applyFoldIntensity(draft, value); },
       setFrostedGlass: (draft, value: boolean) => { draft.frostedGlass = value; },
+      setFnosFileManagerUrl: (draft, value: string) => { draft.fnosFileManagerUrl = value; },
     },
   });
 }

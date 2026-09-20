@@ -12,6 +12,8 @@ import { StreamMotionContext } from './streaming.js';
 import { assistantSegments, boundaryOf, forkAnchorSeq, runningIndicator, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
 import { basename, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
+import { fileManagerName, revealPlanFor, type RevealDesktop, type RevealOutcome } from './reveal.js';
+import { copyToClipboard } from './clipboard.js';
 import { asReadonlyArray, pendingSubmissionImages, type PendingSubmissionEcho } from './pending-submission.js';
 import { WaitingStatus } from './WaitingStatus.js';
 import { handsBackToModel, waitingAnchor } from './waiting-clock.js';
@@ -301,16 +303,22 @@ function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pi
   return <StatusText text={text} motion={motion} shimmer={busy} />;
 }
 
-const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, openMode }: {
+type ChipStatus = 'idle' | 'opened' | 'copied' | 'revealed' | 'revealCopied' | 'failed';
+
+const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, revealDesktop, revealTemplate, openMode }: {
   path: string;
   openFile?: (path: string) => Promise<void> | void;
-  revealFile?: (path: string) => Promise<void> | void;
+  revealFile?: (path: string) => Promise<RevealOutcome>;
+  /** The Host's capability answer; undefined until the shared probe settles. */
+  revealDesktop?: RevealDesktop;
+  /** The configured fnOS file-manager template, if any. */
+  revealTemplate?: string;
   openMode: DeliverableOpenMode;
 }) {
-  const [status, setStatus] = useState<'idle' | 'opened' | 'copied' | 'revealed'>('idle');
+  const [status, setStatus] = useState<ChipStatus>('idle');
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
-  const flash = (next: 'opened' | 'copied' | 'revealed') => {
+  const flash = (next: ChipStatus) => {
     setStatus(next);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setStatus('idle'), 1600);
@@ -322,36 +330,53 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
       openFile?.(path);
       flash('opened');
     } catch {
-      // fallback
+      flash('failed');
     }
   };
 
   const onReveal = (event: React.MouseEvent) => {
     event.stopPropagation();
-    try {
-      if (revealFile) {
-        revealFile(path);
-      } else {
+    if (!revealFile) {
+      try {
         openFile?.(dirname(path));
+        flash('opened');
+      } catch {
+        flash('failed');
       }
-      flash('revealed');
-    } catch {
-      // fallback
+      return;
     }
+    void (async () => {
+      try {
+        const outcome = await revealFile(path);
+        // 'copied' is a real outcome, not a failure: the Host has no desktop, so the
+        // folder path is what the user can actually act on.
+        flash(outcome === 'external' || outcome === 'fnos'
+          ? 'revealed'
+          : outcome === 'copied' ? 'revealCopied' : 'failed');
+      } catch {
+        flash('failed');
+      }
+    })();
   };
 
   const onCopy = (event: React.MouseEvent) => {
     event.stopPropagation();
-    try {
-      void navigator.clipboard?.writeText(path);
-      flash('copied');
-    } catch {
-      // fallback
-    }
+    void (async () => {
+      flash(await copyToClipboard(path) ? 'copied' : 'failed');
+    })();
   };
 
   const name = basename(path);
   const folder = dirname(path);
+  const plan = useMemo(
+    () => revealPlanFor({ folderPath: folder, template: revealTemplate ?? '', desktop: revealDesktop }),
+    [folder, revealTemplate, revealDesktop],
+  );
+  const revealTitle = status === 'revealCopied'
+    ? `已复制目录路径：${folder}`
+    : status === 'failed'
+      ? `未能打开或复制：${folder}`
+      : plan.label;
 
   return (
     <div className={css.deliverableChip} data-status={status} title={path}>
@@ -381,13 +406,24 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
         <button
           type="button"
           className={css.chipActionBtn}
-          title={`在访达中定位所在目录 (${folder})`}
-          aria-label="在访达中显示所在目录"
+          data-reveal={status === 'idle' ? undefined : status}
+          title={revealTitle}
+          aria-label={revealTitle}
           onClick={onReveal}
         >
           {status === 'revealed' ? (
             <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
               <path d="M3.5 8.5l3 3 6-7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : status === 'revealCopied' ? (
+            <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
+              <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" strokeWidth="1.2" />
+              <path d="M4 10.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          ) : status === 'failed' ? (
+            <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
+              <path d="M8 2.5 14 13H2L8 2.5z" strokeWidth="1.2" strokeLinejoin="round" />
+              <path d="M8 6.5v3M8 11.6h.01" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
           ) : (
             <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -418,22 +454,60 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
   );
 });
 
-function DeliverablesRow({ deliverables, openFile, revealFile, openMode }: {
+function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDesktop, fnosFileManagerTemplate, openMode }: {
   deliverables: readonly string[];
   openFile?: (path: string) => Promise<void> | void;
-  revealFile?: (path: string) => Promise<void> | void;
+  revealFile?: (path: string) => Promise<RevealOutcome>;
+  probeRevealDesktop?: () => Promise<RevealDesktop>;
+  fnosFileManagerTemplate?: () => string;
   openMode: DeliverableOpenMode;
 }) {
-  const [folderStatus, setFolderStatus] = useState<'idle' | 'opened'>('idle');
+  const [folderStatus, setFolderStatus] = useState<ChipStatus>('idle');
+  const [desktop, setDesktop] = useState<RevealDesktop>();
+  const template = fnosFileManagerTemplate?.() ?? '';
+
+  // One shared probe per row: the capability is a property of the Host, not the file.
+  useEffect(() => {
+    if (!probeRevealDesktop) return undefined;
+    let live = true;
+    void probeRevealDesktop()
+      .then(next => { if (live) setDesktop(next); })
+      .catch(() => { /* stay with the neutral label */ });
+    return () => { live = false; };
+  }, [probeRevealDesktop]);
+
   const onOpenWorkspace = () => {
-    try {
-      openFile?.('.');
-      setFolderStatus('opened');
-      setTimeout(() => setFolderStatus('idle'), 1600);
-    } catch {
-      // ignore
+    const settle = (next: ChipStatus) => {
+      setFolderStatus(next);
+      window.setTimeout(() => setFolderStatus('idle'), 1600);
+    };
+    if (!revealFile) {
+      try {
+        openFile?.('.');
+        settle('opened');
+      } catch {
+        settle('failed');
+      }
+      return;
     }
+    void (async () => {
+      const outcome = await revealFile('.');
+      settle(outcome === 'external' || outcome === 'fnos'
+        ? 'revealed'
+        : outcome === 'copied' ? 'revealCopied' : 'failed');
+    })();
   };
+
+  const workspaceLabel = desktop === undefined
+    ? '在文件夹中显示'
+    : desktop.available
+      ? `在${fileManagerName(desktop.fileManager)}中显示`
+      : '复制工作区路径';
+  const workspaceTitle = desktop === undefined
+    ? '在文件夹中显示整个工作区目录'
+    : desktop.available
+      ? `在${fileManagerName(desktop.fileManager)}中打开整个工作区目录`
+      : `复制工作区目录路径（${desktop.name ?? '宿主'}没有桌面环境）`;
 
   return (
     <div className={css.deliverablesRoot} data-reader-deliverables>
@@ -441,7 +515,15 @@ function DeliverablesRow({ deliverables, openFile, revealFile, openMode }: {
       <div className={css.deliverablesLane}>
         <div className={css.deliverablesRow}>
           {deliverables.slice(0, 8).map(path => (
-            <DeliverableChip key={path} path={path} openFile={openFile} revealFile={revealFile} openMode={openMode} />
+            <DeliverableChip
+              key={path}
+              path={path}
+              openFile={openFile}
+              revealFile={revealFile}
+              revealDesktop={desktop}
+              revealTemplate={template}
+              openMode={openMode}
+            />
           ))}
           {deliverables.length > 8 && (
             <span className={css.deliverablesMore}>
@@ -454,14 +536,19 @@ function DeliverablesRow({ deliverables, openFile, revealFile, openMode }: {
               className={css.deliverablesShowFolder}
               data-status={folderStatus}
               onClick={onOpenWorkspace}
-              title="在访达中打开整个工作区目录"
+              title={workspaceTitle}
+              aria-label={workspaceTitle}
             >
-              {folderStatus === 'opened' && (
+              {folderStatus === 'revealed' && (
                 <svg className={css.statusIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
                   <path d="M3.5 8.5l3 3 6-7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
-              <span>{folderStatus === 'opened' ? '已打开访达' : '在文件夹中显示'}</span>
+              <span>
+                {folderStatus === 'revealed'
+                  ? '已打开'
+                  : folderStatus === 'revealCopied' ? '已复制路径' : folderStatus === 'failed' ? '未能打开' : workspaceLabel}
+              </span>
             </button>
           )}
         </div>
@@ -541,6 +628,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     fillComposer: props.fillComposer,
     openFile: props.openFile,
     revealFile: props.revealFile,
+    probeRevealDesktop: props.probeRevealDesktop,
     forkAt: props.forkAt,
     forkSeq,
     fileMentions,
@@ -593,7 +681,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     {!hasProcess && boundary.status === 'open' && !isAwaitingModel && <div className={css.disclosure} data-reader-status-only>
       <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />
     </div>}
-    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} openMode={openMode} />}
+    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} probeRevealDesktop={props.probeRevealDesktop} fnosFileManagerTemplate={props.fnosFileManagerTemplate} openMode={openMode} />}
     {showTerminalNotice && <div className={css.notice} data-reader-terminal>{terminal}</div>}
   </section>;
 });

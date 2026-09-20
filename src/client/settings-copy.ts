@@ -9,6 +9,10 @@ export type SettingsCopyKey =
   | 'foldNone'
   | 'foldStandard'
   | 'foldSummary'
+  | 'fnosTitle'
+  | 'fnosDescription'
+  | 'fnosPlaceholder'
+  | 'fnosTokens'
   | 'skillTitle'
   | 'skillInstalled'
   | 'skillMissing'
@@ -32,6 +36,10 @@ export const en: SettingsCopy = {
   foldNone: 'Off',
   foldStandard: 'On',
   foldSummary: 'Summary',
+  fnosTitle: 'fnOS file-manager URL',
+  fnosDescription: 'Only needed when the Host has no desktop, like a NAS: macOS and Windows always use Finder or Explorer, and this is skipped there. Fill it in and「在文件夹中显示」opens the NAS file manager instead of silently doing nothing. Requires a path placeholder, and only applies to /vol{n}/… paths.',
+  fnosPlaceholder: 'http://<nas>:5666/v/trim.file-manager?path={encodedPath}',
+  fnosTokens: 'Placeholders: {path} raw, {encodedPath} URL-encoded, {name} folder name. The address must be reachable from the browser you are using.',
   skillTitle: 'generative-mcpapps skill',
   skillInstalled: 'Installed',
   skillMissing: 'Not detected',
@@ -54,6 +62,10 @@ export const zh: SettingsCopy = {
   foldNone: '关闭',
   foldStandard: '开启',
   foldSummary: '摘要',
+  fnosTitle: 'fnOS 文件管理器地址',
+  fnosDescription: '只有宿主没有桌面时才需要，比如 NAS：macOS 和 Windows 一律走访达 / 资源管理器，那里会跳过这一项。填上之后，「在文件夹中显示」会改为打开 NAS 的文件管理器，而不是悄无声息地什么都没发生。必须包含路径占位符，且只对 /vol{n}/… 路径生效。',
+  fnosPlaceholder: 'http://<nas>:5666/v/trim.file-manager?path={encodedPath}',
+  fnosTokens: '占位符：{path} 原始路径，{encodedPath} URL 编码路径，{name} 目录名。这个地址必须能从你当前使用的浏览器访问到。',
   skillTitle: 'generative-mcpapps 技能',
   skillInstalled: '已安装',
   skillMissing: '未检测到',

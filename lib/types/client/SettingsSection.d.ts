@@ -5,11 +5,14 @@ import { type SkillStatusProbe } from './skill-status.js';
 /**
  * The Better Display section.
  *
- * One card: a titled header, then hairline-separated rows whose control rides the first
- * line of the label instead of centring against a multi-line description, and full-width
- * fields with their hint underneath. Controls come from the shell's own `Switch` /
- * `Input` / `Button` / `Tag` primitives so the section looks like the rest of Settings
- * rather than like a plugin.
+ * The section title sits outside any border, and **each module carries its own** — so the
+ * panel reads as a list of independent settings instead of one slab. Modules whose body is
+ * long (the fnOS template, the skill report) keep that body behind a click, so the panel
+ * stays scannable; a module that is nothing but a labelled switch stays open, because its
+ * description is the setting.
+ *
+ * Controls come from the shell's own `Switch` / `Input` / `Button` / `Tag` primitives, so
+ * the section looks like the rest of Settings rather than like a plugin.
  */
 export interface ReaderPrefsSnapshot {
     deliverableOpenMode?: DeliverableOpenMode;

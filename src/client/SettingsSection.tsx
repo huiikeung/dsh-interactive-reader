@@ -10,11 +10,14 @@ import css from './SettingsSection.module.css';
 /**
  * The Better Display section.
  *
- * One card: a titled header, then hairline-separated rows whose control rides the first
- * line of the label instead of centring against a multi-line description, and full-width
- * fields with their hint underneath. Controls come from the shell's own `Switch` /
- * `Input` / `Button` / `Tag` primitives so the section looks like the rest of Settings
- * rather than like a plugin.
+ * The section title sits outside any border, and **each module carries its own** — so the
+ * panel reads as a list of independent settings instead of one slab. Modules whose body is
+ * long (the fnOS template, the skill report) keep that body behind a click, so the panel
+ * stays scannable; a module that is nothing but a labelled switch stays open, because its
+ * description is the setting.
+ *
+ * Controls come from the shell's own `Switch` / `Input` / `Button` / `Tag` primitives, so
+ * the section looks like the rest of Settings rather than like a plugin.
  */
 
 export interface ReaderPrefsSnapshot {
@@ -52,6 +55,8 @@ type SettingsProps = BetterDisplaySettingsInjected & {
   t?: (key: SettingsCopyKey) => string;
 };
 
+type ModuleAttrs = Record<`data-${string}`, string | undefined>;
+
 function text(props: SettingsProps, copy: SettingsCopy, key: keyof SettingsCopy): string {
   if (typeof props.t === 'function') {
     try {
@@ -64,20 +69,65 @@ function text(props: SettingsProps, copy: SettingsCopy, key: keyof SettingsCopy)
   return copy[key];
 }
 
-/** One row: label and description on the left, its control on the first line's right. */
-function Row({ title, description, control, ...rest }: {
+/** Chevron for a module that opens. */
+function Chevron() {
+  return (
+    <svg className={css.chevron} viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true">
+      <path d="M6.5 4 10.5 8 6.5 12" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/**
+ * A module whose whole content is a labelled switch: title, description, control on the
+ * first line's right. Always open, because the description is what the switch does.
+ */
+function SwitchModule({ title, description, checked, onChange, ...rest }: {
   title: string;
   description: string;
-  control: ReactNode;
-} & Record<`data-${string}`, string | undefined>) {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+} & ModuleAttrs) {
   return (
-    <div className={css.row} {...rest}>
-      <div className={css.rowText}>
-        <div className={css.rowTitle}>{title}</div>
-        <p className={css.rowDesc}>{description}</p>
+    <section className={css.module} {...rest}>
+      <div className={css.moduleHead}>
+        <div className={css.moduleText}>
+          <div className={css.moduleTitle}>{title}</div>
+          <p className={css.moduleDesc}>{description}</p>
+        </div>
+        <div className={css.moduleControl}>
+          <Switch checked={checked} onChange={onChange} label={title} />
+        </div>
       </div>
-      <div className={css.rowControl}>{control}</div>
-    </div>
+    </section>
+  );
+}
+
+/**
+ * A module with a long body: its header is the toggle, and the body only renders once the
+ * user opens it.
+ */
+function FoldModule({ title, trailing, children, ...rest }: {
+  title: string;
+  /** Always-visible status for the header, e.g. the skill badge. */
+  trailing?: ReactNode;
+  children: ReactNode;
+} & ModuleAttrs) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className={css.module} data-open={open || undefined} {...rest}>
+      <button
+        type="button"
+        className={css.moduleToggle}
+        aria-expanded={open}
+        onClick={() => setOpen(value => !value)}
+      >
+        <Chevron />
+        <span className={css.moduleTitle}>{title}</span>
+        {trailing ? <span className={css.moduleTail}>{trailing}</span> : null}
+      </button>
+      {open ? <div className={css.moduleBody}>{children}</div> : null}
+    </section>
   );
 }
 
@@ -120,101 +170,87 @@ export function SettingsSection(props: SettingsProps) {
   return (
     <div className={css.section} data-better-display-settings>
       <header className={css.header}>
-        <div className={css.headerText}>
-          <div className={css.headerTitle}>{text(props, copy, 'nav')}</div>
-          <p className={css.headerDesc}>{text(props, copy, 'sectionSubtitle')}</p>
-        </div>
+        <div className={css.headerTitle}>{text(props, copy, 'nav')}</div>
+        <p className={css.headerDesc}>{text(props, copy, 'sectionSubtitle')}</p>
       </header>
 
-      <div className={css.rows}>
-        <Row
-          title={text(props, copy, 'openTitle')}
-          description={text(props, copy, 'openDescription')}
-          data-better-display-open-mode={mode}
-          control={
-            <Switch
-              checked={on}
-              label={text(props, copy, 'openTitle')}
-              onChange={next => { props.prefs.actions.setDeliverableOpenMode(next ? 'sidebar' : 'external'); }}
-            />
-          }
-        />
+      <SwitchModule
+        title={text(props, copy, 'openTitle')}
+        description={text(props, copy, 'openDescription')}
+        checked={on}
+        data-better-display-open-mode={mode}
+        onChange={next => { props.prefs.actions.setDeliverableOpenMode(next ? 'sidebar' : 'external'); }}
+      />
 
-        <Row
-          title={text(props, copy, 'glassTitle')}
-          description={text(props, copy, 'glassDescription')}
-          data-better-display-glass={glass ? 'on' : 'off'}
-          control={
-            <Switch
-              checked={glass}
-              label={text(props, copy, 'glassTitle')}
-              onChange={next => { props.prefs.actions.setFrostedGlass(next); }}
-            />
-          }
-        />
+      <SwitchModule
+        title={text(props, copy, 'glassTitle')}
+        description={text(props, copy, 'glassDescription')}
+        checked={glass}
+        data-better-display-glass={glass ? 'on' : 'off'}
+        onChange={next => { props.prefs.actions.setFrostedGlass(next); }}
+      />
 
-        <Row
-          title={text(props, copy, 'foldTitle')}
-          description={text(props, copy, 'foldDescription')}
-          data-better-display-auto-fold={autoFold ? 'on' : 'off'}
-          control={
-            <Switch
-              checked={autoFold}
-              label={text(props, copy, 'foldTitle')}
-              onChange={next => {
-                props.prefs.actions.setAutoFold?.(next);
-                props.prefs.actions.setFoldIntensity?.(next ? 1 : 0);
-              }}
-            />
-          }
-        />
+      <SwitchModule
+        title={text(props, copy, 'foldTitle')}
+        description={text(props, copy, 'foldDescription')}
+        checked={autoFold}
+        data-better-display-auto-fold={autoFold ? 'on' : 'off'}
+        onChange={next => {
+          props.prefs.actions.setAutoFold?.(next);
+          props.prefs.actions.setFoldIntensity?.(next ? 1 : 0);
+        }}
+      />
 
-        <div className={css.field} data-better-display-fnos data-fnos-configured={fnosUrl.trim() !== '' || undefined}>
-          <div className={css.rowTitle}>{text(props, copy, 'fnosTitle')}</div>
-          <p className={css.rowDesc}>{text(props, copy, 'fnosDescription')}</p>
-          <Input
-            type="url"
-            className={css.input}
-            value={fnosUrl}
-            spellCheck={false}
-            autoComplete="off"
-            aria-label={text(props, copy, 'fnosTitle')}
-            placeholder={text(props, copy, 'fnosPlaceholder')}
-            onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              setFnosUrl(event.target.value);
-              props.prefs.actions.setFnosFileManagerUrl?.(event.target.value);
-            }}
-          />
-          <p className={css.hint}>{text(props, copy, 'fnosTokens')}</p>
+      <FoldModule
+        title={text(props, copy, 'fnosTitle')}
+        data-better-display-fnos
+        data-fnos-configured={fnosUrl.trim() !== '' || undefined}
+      >
+        <p className={css.moduleDesc}>{text(props, copy, 'fnosDescription')}</p>
+        <Input
+          type="url"
+          className={css.input}
+          value={fnosUrl}
+          spellCheck={false}
+          autoComplete="off"
+          aria-label={text(props, copy, 'fnosTitle')}
+          placeholder={text(props, copy, 'fnosPlaceholder')}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            setFnosUrl(event.target.value);
+            props.prefs.actions.setFnosFileManagerUrl?.(event.target.value);
+          }}
+        />
+        <p className={css.hint}>{text(props, copy, 'fnosTokens')}</p>
+      </FoldModule>
+
+      <FoldModule
+        title={text(props, copy, 'skillTitle')}
+        trailing={
+          <Tag tone={skill?.installed ? 'success' : 'neutral'}>
+            {skill?.installed ? text(props, copy, 'skillInstalled') : text(props, copy, 'skillMissing')}
+          </Tag>
+        }
+        data-better-display-skill={skill?.installed ? 'installed' : 'missing'}
+      >
+        <p className={css.moduleDesc}>{text(props, copy, 'skillPurpose')}</p>
+        <p className={css.moduleDesc}>{text(props, copy, 'skillPluginNote')}</p>
+        {skill && !skill.installed ? (
+          <>
+            <p className={css.moduleDesc}>{skill.hostReached ? text(props, copy, 'skillInstall') : text(props, copy, 'skillUnavailable')}</p>
+            <pre className={css.pre}>{shortestInstallCommand()}</pre>
+            <ul className={css.roots} data-better-display-skill-roots>
+              {CONVENTIONAL_SKILL_ROOTS.map(root => (
+                <li key={root}>{root}</li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        <div className={css.actions}>
+          <Button variant="outline" size="sm" disabled={checking} onClick={() => { void recheck(); }}>
+            {checking ? text(props, copy, 'skillChecking') : text(props, copy, 'skillRecheck')}
+          </Button>
         </div>
-
-        <div className={css.block} data-better-display-skill={skill?.installed ? 'installed' : 'missing'}>
-          <div className={css.blockHead}>
-            <div className={css.rowTitle}>{text(props, copy, 'skillTitle')}</div>
-            <Tag tone={skill?.installed ? 'success' : 'neutral'}>
-              {skill?.installed ? text(props, copy, 'skillInstalled') : text(props, copy, 'skillMissing')}
-            </Tag>
-          </div>
-          <p className={css.rowDesc}>{text(props, copy, 'skillPurpose')}</p>
-          <p className={css.rowDesc}>{text(props, copy, 'skillPluginNote')}</p>
-          {skill && !skill.installed ? (
-            <>
-              <p className={css.rowDesc}>{skill.hostReached ? text(props, copy, 'skillInstall') : text(props, copy, 'skillUnavailable')}</p>
-              <pre className={css.pre}>{shortestInstallCommand()}</pre>
-              <ul className={css.roots} data-better-display-skill-roots>
-                {CONVENTIONAL_SKILL_ROOTS.map(root => (
-                  <li key={root}>{root}</li>
-                ))}
-              </ul>
-            </>
-          ) : null}
-          <div className={css.actions}>
-            <Button variant="outline" size="sm" disabled={checking} onClick={() => { void recheck(); }}>
-              {checking ? text(props, copy, 'skillChecking') : text(props, copy, 'skillRecheck')}
-            </Button>
-          </div>
-        </div>
-      </div>
+      </FoldModule>
     </div>
   );
 }

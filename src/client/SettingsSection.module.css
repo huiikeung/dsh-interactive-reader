@@ -1,35 +1,21 @@
 /**
- * One card: header, then hairline-separated rows. Every hairline comes from the
- * `rows > * + *` rule rather than a per-row `border-bottom`, so a row that changes kind
- * (a switch row, a field, a status block) cannot break the rhythm.
+ * The section title lives outside any border; every module is its own bordered box, so the
+ * panel reads as a list of independent settings instead of one slab.
  */
 .section {
   display: flex;
   flex-direction: column;
+  gap: 10px;
   box-sizing: border-box;
   width: 100%;
   max-width: 640px;
-  /* One step up from the row hairlines: the card is white on a white panel, so the
-     border is the only thing that separates it (`l1` is 4% black and reads as nothing). */
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-base);
-  overflow: hidden;
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1);
-}
-
-.headerText {
-  display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 0;
+  padding: 0 2px 4px;
 }
 
 .headerTitle {
@@ -46,25 +32,26 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
-.rows {
-  display: flex;
-  flex-direction: column;
+/* One module, one border. `border-l2` rather than `l1`: a white box on a white panel needs
+   an edge you can actually see. */
+.module {
+  box-sizing: border-box;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-base);
+  overflow: hidden;
 }
 
-.rows > * + * {
-  border-top: 1px solid var(--dsw-alias-border-l1);
-}
-
-.row {
+.moduleHead {
   display: flex;
-  /* The control rides the label's line; centring it left the toggle floating against a
+  /* The control rides the label's line; centring it left the switch floating against a
      three-line description. */
   align-items: flex-start;
   gap: 16px;
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
-.rowText {
+.moduleText {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -72,39 +59,82 @@
   min-width: 0;
 }
 
-.rowTitle {
+.moduleTitle {
   font-size: 13px;
   font-weight: 500;
   line-height: 20px;
   color: var(--dsw-alias-label-primary);
 }
 
-.rowDesc {
+.moduleDesc {
   margin: 0;
   font-size: 12px;
   line-height: 18px;
   color: var(--dsw-alias-label-tertiary);
 }
 
-.rowControl {
+.moduleControl {
   display: flex;
   align-items: center;
   flex: none;
   height: 20px;
 }
 
-.field,
-.block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-}
-
-.blockHead {
+/* A module that opens: the whole header is the toggle. */
+.moduleToggle {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.moduleToggle:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.moduleToggle:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: -2px;
+}
+
+.moduleToggle .moduleTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.moduleTail {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+  transition: transform 140ms ease;
+}
+
+/* Collapsed points right, open points down — the reference's own disclosure cue. */
+.module[data-open] .chevron {
+  transform: rotate(90deg);
+}
+
+.moduleBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
 }
 
 /* The primitive wraps its input in a span, so both need the full width. */

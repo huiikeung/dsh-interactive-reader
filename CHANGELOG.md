@@ -2,47 +2,51 @@
 
 ## 0.6.0
 
-Redesigns the **Better Display** section in Settings, taking the visual language of
-`dsh-vision-router`'s settings panel as the reference. Presentation only: every switch,
-field and action keeps the behaviour and the `data-better-display-*` hooks it had.
+Redesigns the **Better Display** section in Settings after `dsh-vision-router`'s panel: the
+title sits outside any border, **each module is its own bordered box**, and a module whose
+body is long opens on a click. Presentation only — every switch, field and action keeps the
+behaviour and the `data-better-display-*` hooks it had.
 
 ### What was wrong
 
-- No card and **no section title** at all: the panel opened straight into a switch row, so
-  the section had no identity next to General or Models.
+- No section title at all: the panel opened straight into a switch row, so the section had no
+  identity next to General or Models.
 - Controls were vertically centred, so a toggle floated in the middle of a three-line
   description instead of sitting on its label's line.
 - The first three rows were plain rows with a divider while the fnOS field and the skill
   status were unseparated blocks, so the vertical rhythm broke halfway down.
-- Switches and the text field were hand-rolled rather than the shell's own controls.
+- Everything was hand-rolled — including the switch and the text field — instead of the
+  shell's own controls, and long content was simply dumped into the panel.
 
 ### What it looks like now
 
-- **One card**: 12px radius, a `border-l2` hairline (a white card on a white panel needs a
-  visible edge — `border-l1` is 4% black and reads as nothing), and a titled header with a
-  muted subtitle, matching the reference.
-- **Rows** keep the label and description on the left and put the control on the first
-  line's right (`align-items: flex-start`).
-- **Hairlines come from one rule**, `rows > * + *`, instead of a per-row `border-bottom`,
-  so a row that changes kind — a switch row, a field, a status block — cannot break the
-  rhythm.
+- **The title carries no border**: `Better Display` plus a muted subtitle stand above the
+  boxes, like the reference's own section heading.
+- **One border per module**: each setting is its own 12px-radius box with a `border-l2`
+  hairline (`l1` is 4% black and a white box on a white panel needs an edge you can see),
+  separated by a 10px gap — so the panel reads as independent settings, not one slab.
+- **Long content opens on a click**: the fnOS template and the skill report render only
+  their header until opened. The header is the toggle (`aria-expanded`), it carries the same
+  left-hand chevron cue the reference uses (pointing right closed, down open), and the skill
+  module keeps its status `Tag` visible while closed.
+- A module that is nothing but a labelled switch stays open, because its description *is*
+  the setting.
 - **Shell primitives** replace the hand-rolled controls: `Switch`, `Input`, `Button` and
   `Tag` from `@deepseek-ai/dsh-client-ui-primitives` — the same controls the reference uses,
-  which is why it needed almost no bespoke styling. The skill badge becomes a real `Tag`
-  (`success` / `neutral`) and Re-check a real `size="sm"` outline `Button`.
-- The fnOS URL field is a full-width `Input` with its hint underneath, and the card is
-  capped at 640px so it matches the width of the shell's own settings column.
+  which is why it needed almost no bespoke styling.
 
 Removed with the rewrite: the unused `FOLD_STOPS` table, the hand-rolled switch styles, and
 the dead segment/slider rules.
 
 ### Verified
 
-- Live in the running GUI: the card, header, top-aligned toggles, hairline rhythm and
-  full-width field all render as intended, 1:1 between the classes the component uses and
-  the sheet that defines them.
-- Dark theme flips entirely through tokens (card `rgb(21,21,23)`, border
+- Live in the running GUI: the title's border is `0px`, five modules each carry a `1px`
+  border, two of them are toggles; clicking both opens their bodies (the fnOS `Input`
+  appears, the chevron rotates 90°) and clicking again closes them. No page errors.
+- Dark theme flips entirely through tokens (box `rgb(21,21,23)`, border
   `rgba(255,255,255,.12)`), and a 900px window has no horizontal overflow.
+- `SettingsSection.tsx` and its sheet are 1:1 — no class used but undefined, none defined
+  but unused.
 - 177 tests pass; typecheck and build clean.
 
 ## 0.5.1

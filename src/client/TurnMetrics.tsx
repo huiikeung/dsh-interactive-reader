@@ -1,4 +1,5 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import type { TurnTailChatData } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { formatRanFor, formatRunDuration } from './message-chrome.js';
 import css from './TurnMetrics.module.css';
@@ -25,7 +26,45 @@ export const TurnMetrics = memo(function TurnMetrics({
   ttftMs,
 }: TurnMetricsProps) {
   const [open, setOpen] = useState(false);
+  const [popupPlacement, setPopupPlacement] = useState<'above' | 'below'>('above');
+  const [popupStyle, setPopupStyle] = useState<CSSProperties>({});
   const containerRef = useRef<HTMLSpanElement>(null);
+
+  const updatePopupPlacement = useCallback(() => {
+    if (!containerRef.current || typeof window === 'undefined') return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const estimatedPopupHeight = 320;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const placement: 'above' | 'below' = spaceBelow < estimatedPopupHeight ? 'below' : 'above';
+    setPopupPlacement(placement);
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 260 - 8));
+    if (placement === 'above') {
+      setPopupStyle({
+        position: 'fixed',
+        left,
+        bottom: window.innerHeight - rect.top + 8,
+      });
+    } else {
+      setPopupStyle({
+        position: 'fixed',
+        left,
+        top: rect.bottom + 8,
+      });
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const raf = requestAnimationFrame(() => {
+      updatePopupPlacement();
+    });
+    const onResize = () => updatePopupPlacement();
+    window.addEventListener('resize', onResize);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open, updatePopupPlacement]);
 
   useEffect(() => {
     if (!open) return;
@@ -92,7 +131,7 @@ export const TurnMetrics = memo(function TurnMetrics({
       )}
 
       {open && (
-        <div className={css.metricsPop} role="dialog" aria-label="本轮概况">
+        <div className={css.metricsPop} role="dialog" aria-label="本轮概况" style={popupStyle}>
           <div className={css.popHeader}>
             <span>本轮性能与用量概况</span>
             <button type="button" className={css.popClose} onClick={() => setOpen(false)} aria-label="关闭">

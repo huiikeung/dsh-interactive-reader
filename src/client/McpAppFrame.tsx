@@ -43,7 +43,7 @@ export const McpAppFrame = memo(function McpAppFrame({
   );
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const lastParamsRef = useRef<Record<string, unknown>>({});
-  const [height, setHeight] = useState(() => Math.max(60, Math.min(2400, initialHeight)));
+  const [height, setHeight] = useState(() => Math.max(60, Math.min(600, initialHeight)));
   const [ready, setReady] = useState(false);
   const [receipt, setReceipt] = useState<string | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string | null>(null);
@@ -141,7 +141,7 @@ export const McpAppFrame = memo(function McpAppFrame({
       if (data.method === 'ui/resize' && data.params?.height) {
         const h = Number(data.params.height);
         if (Number.isFinite(h) && h > 0) {
-          setHeight(Math.max(60, Math.min(2400, Math.round(h))));
+          setHeight(Math.max(60, Math.min(600, Math.round(h))));
         }
         return;
       }

@@ -85,6 +85,8 @@
   position: relative;
   background: transparent;
   transition: height 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  max-height: 600px;
+  overflow-y: auto;
 }
 
 .iframe {

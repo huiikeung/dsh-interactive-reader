@@ -40,6 +40,7 @@
 .retiringContent { min-width: 0; }
 .retiringContent[data-reader-retiring=retiring] { overflow: hidden; }
 .mainFlow, .blocks { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.blocks { overflow: hidden; }
 .mainFlow:empty, .blocks:empty { display: none; }
 .blocks > :first-child { margin-top: 0; }
 .blocks > :last-child { margin-bottom: 0; }

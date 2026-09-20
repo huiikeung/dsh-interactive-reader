@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.6.0
+
+Redesigns the **Better Display** section in Settings, taking the visual language of
+`dsh-vision-router`'s settings panel as the reference. Presentation only: every switch,
+field and action keeps the behaviour and the `data-better-display-*` hooks it had.
+
+### What was wrong
+
+- No card and **no section title** at all: the panel opened straight into a switch row, so
+  the section had no identity next to General or Models.
+- Controls were vertically centred, so a toggle floated in the middle of a three-line
+  description instead of sitting on its label's line.
+- The first three rows were plain rows with a divider while the fnOS field and the skill
+  status were unseparated blocks, so the vertical rhythm broke halfway down.
+- Switches and the text field were hand-rolled rather than the shell's own controls.
+
+### What it looks like now
+
+- **One card**: 12px radius, a `border-l2` hairline (a white card on a white panel needs a
+  visible edge — `border-l1` is 4% black and reads as nothing), and a titled header with a
+  muted subtitle, matching the reference.
+- **Rows** keep the label and description on the left and put the control on the first
+  line's right (`align-items: flex-start`).
+- **Hairlines come from one rule**, `rows > * + *`, instead of a per-row `border-bottom`,
+  so a row that changes kind — a switch row, a field, a status block — cannot break the
+  rhythm.
+- **Shell primitives** replace the hand-rolled controls: `Switch`, `Input`, `Button` and
+  `Tag` from `@deepseek-ai/dsh-client-ui-primitives` — the same controls the reference uses,
+  which is why it needed almost no bespoke styling. The skill badge becomes a real `Tag`
+  (`success` / `neutral`) and Re-check a real `size="sm"` outline `Button`.
+- The fnOS URL field is a full-width `Input` with its hint underneath, and the card is
+  capped at 640px so it matches the width of the shell's own settings column.
+
+Removed with the rewrite: the unused `FOLD_STOPS` table, the hand-rolled switch styles, and
+the dead segment/slider rules.
+
+### Verified
+
+- Live in the running GUI: the card, header, top-aligned toggles, hairline rhythm and
+  full-width field all render as intended, 1:1 between the classes the component uses and
+  the sheet that defines them.
+- Dark theme flips entirely through tokens (card `rgb(21,21,23)`, border
+  `rgba(255,255,255,.12)`), and a 900px window has no horizontal overflow.
+- 177 tests pass; typecheck and build clean.
+
 ## 0.5.1
 
 Fixes the turn-metrics panel (「本轮性能与用量概况」) going see-through when the usage pill

@@ -5,7 +5,7 @@
 推荐用 npm（可钉版本）：
 
 ```sh
-dsh plugin --profile web add dsh-better-display@0.5.1
+dsh plugin --profile web add dsh-better-display@0.6.0
 ```
 
 也可以装 latest：
@@ -40,7 +40,7 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 ```sh
 dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.5.1.tgz
+dsh plugin --profile web add ./dsh-better-display-0.6.0.tgz
 ```
 
 `dsh.bundle` 是开机捕获的。不要再往 profile 的 `cordis.patch.yml` 手写同一条 insert，会重复挂载。

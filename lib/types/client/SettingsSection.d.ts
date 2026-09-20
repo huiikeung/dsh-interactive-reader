@@ -2,6 +2,15 @@ import { type FoldIntensity } from './fold-intensity.js';
 import { type DeliverableOpenMode } from './open-file.js';
 import { type SettingsCopy, type SettingsCopyKey } from './settings-copy.js';
 import { type SkillStatusProbe } from './skill-status.js';
+/**
+ * The Better Display section.
+ *
+ * One card: a titled header, then hairline-separated rows whose control rides the first
+ * line of the label instead of centring against a multi-line description, and full-width
+ * fields with their hint underneath. Controls come from the shell's own `Switch` /
+ * `Input` / `Button` / `Tag` primitives so the section looks like the rest of Settings
+ * rather than like a plugin.
+ */
 export interface ReaderPrefsSnapshot {
     deliverableOpenMode?: DeliverableOpenMode;
     frostedGlass?: boolean;

@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState, useCallback } from 
 import type { CSSProperties } from 'react';
 import type { TurnTailChatData } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { formatRanFor, formatRunDuration } from './message-chrome.js';
+import { POPUP_GAP, popupLayoutFor } from './popup-placement.js';
 import css from './TurnMetrics.module.css';
 
 type TurnTokenUsage = NonNullable<TurnTailChatData['tokenUsage']>;
@@ -33,22 +34,39 @@ export const TurnMetrics = memo(function TurnMetrics({
   const updatePopupPlacement = useCallback(() => {
     if (!containerRef.current || typeof window === 'undefined') return;
     const rect = containerRef.current.getBoundingClientRect();
-    const estimatedPopupHeight = 320;
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const placement: 'above' | 'below' = spaceBelow < estimatedPopupHeight ? 'below' : 'above';
-    setPopupPlacement(placement);
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 260 - 8));
-    if (placement === 'above') {
+    // The Host's sticky composer seat owns the footer band and paints over anything
+    // placed there, so it — not the viewport bottom — is the panel's lower limit.
+    const seat = document.querySelector('[data-composer-seat]')
+      ?? document.querySelector('[class*="composerSeat"]');
+    const seatTop = seat?.getBoundingClientRect().top;
+    const layout = popupLayoutFor({
+      triggerTop: rect.top,
+      triggerBottom: rect.bottom,
+      triggerLeft: rect.left,
+      viewportWidth: window.innerWidth,
+      availableBottom: typeof seatTop === 'number' && seatTop > rect.bottom
+        ? Math.min(window.innerHeight, seatTop)
+        : window.innerHeight,
+    });
+    setPopupPlacement(layout.placement);
+    // Clamped to the viewport on both axes, so a short window scrolls the panel instead
+    // of cutting it off — and never drops it into the Host's composer band, which paints
+    // over anything there.
+    if (layout.placement === 'above') {
       setPopupStyle({
         position: 'fixed',
-        left,
-        bottom: window.innerHeight - rect.top + 8,
+        left: layout.left,
+        bottom: window.innerHeight - rect.top + POPUP_GAP,
+        maxHeight: layout.maxHeight,
+        overflowY: 'auto',
       });
     } else {
       setPopupStyle({
         position: 'fixed',
-        left,
-        top: rect.bottom + 8,
+        left: layout.left,
+        top: rect.bottom + POPUP_GAP,
+        maxHeight: layout.maxHeight,
+        overflowY: 'auto',
       });
     }
   }, []);
@@ -131,7 +149,7 @@ export const TurnMetrics = memo(function TurnMetrics({
       )}
 
       {open && (
-        <div className={css.metricsPop} role="dialog" aria-label="本轮概况" style={popupStyle}>
+        <div className={css.metricsPop} role="dialog" aria-label="本轮概况" data-placement={popupPlacement} style={popupStyle}>
           <div className={css.popHeader}>
             <span>本轮性能与用量概况</span>
             <button type="button" className={css.popClose} onClick={() => setOpen(false)} aria-label="关闭">

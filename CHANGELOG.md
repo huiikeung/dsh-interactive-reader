@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.5.1
+
+Fixes the turn-metrics panel (「本轮性能与用量概况」) going see-through when the usage pill
+sits low in the window.
+
+### What it was
+
+The panel's placement was decided from the space *below* the trigger and then concluded the
+opposite: with only 186px below, it placed the panel below anyway. That drops it straight
+into the Host's sticky composer band, which paints over anything there — so the panel was
+cut to a ~26px strip and its body read as transparent with the composer's own text showing
+through it.
+
+### The rule now
+
+- The panel opens **upward by default**, which is the side the trigger's own row frees up.
+  It flips below only when the trigger sits too close to the top for the panel to fit there
+  *and* the other side genuinely has more room.
+- The lower limit is the Host **composer seat's top**, not the viewport bottom: the composer
+  band is not usable space, and counting it as room is what caused the bug.
+- The panel is capped by the space it actually has (`max-height` + own scroll) and clamped
+  inside the viewport horizontally, so a short window scrolls it instead of cutting it off.
+- `data-placement` now reports the chosen side.
+
+The rule moved to [`src/client/popup-placement.ts`](src/client/popup-placement.ts) so it is
+testable on its own; `tests/popup-placement.test.ts` pins the low-trigger case, the flip, the
+horizontal clamp and the composer-band exclusion. Verified live in a 620px window with the
+pill 16px above the composer: the panel renders 211px tall, fully opaque, clear of the
+composer, entirely inside the viewport. 177 tests.
+
 ## 0.5.0
 
 Makes「在文件夹中显示」work everywhere instead of only on macOS and Windows, and gives

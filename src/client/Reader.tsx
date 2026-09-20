@@ -14,13 +14,14 @@ import { basename, createProducedFileMentions, dirname, getTurnDeliverables, sho
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
 import { asReadonlyArray, pendingSubmissionImages, type PendingSubmissionEcho } from './pending-submission.js';
 import { WaitingStatus } from './WaitingStatus.js';
-import { waitingAnchor } from './waiting-clock.js';
+import { handsBackToModel, waitingAnchor } from './waiting-clock.js';
 import { ContextInjectionRow } from './native/ContextInjectionRow.js';
 import { TimelineRail } from './TimelineRail.js';
 import { landTurn, scrollerOf } from './conversation-scroll.js';
 import { mergeTimelineItems, type TimelineItem } from './timeline.js';
 import { presentLiveTurn, segmentLiveTurn } from './live-turn.js';
 import type { LiveStep } from './live-turn.js';
+import { frostedGlassOf } from './fold-intensity.js';
 import { ChoreographedFlow, useFlowChat } from './ChoreographedFlow.js';
 import { ClosedProcessSummary } from './ClosedProcessSummary.js';
 import { StickyLane } from './StickyLane.js';
@@ -240,18 +241,33 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   }
   if (isNode(node, 'manual-compaction') || isNode(node, 'compaction')) return null;
   if (node.kind === 'context' || node.kind === 'turn-tail' || node.kind === 'system-prompt' || node.kind === 'turn-process') return null;
-  if ((node.kind as string) === 'command-input') {
-    const data = node.data as { readonly text: string };
-    return <div className={css.user} data-reader-anchor data-reader-key={nodeKey}>
-      <p className={css.meta}>命令输入</p>
-      <p className={css.commandInput}>{data.text}</p>
-    </div>;
-  }
+  // No 'command-input' branch: that string is not a chat node kind in any released
+  // host (it appears nowhere in the installed packages), so a slash command arrives
+  // as 'command' above and is rendered there. Keeping the branch only made the file
+  // look like it handled a case that cannot occur.
   return <div className={css.unknown} data-reader-anchor>
     <p>此记录类型暂未接入阅读页：{node.kind}</p>
     <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
   </div>;
 });
+
+/**
+ * Sub-agents this turn dispatched, read from the host's own Turn-process row.
+ *
+ * The host already derives this from the dispatch tree (`subagentCount` on
+ * `TurnProcessChatData`), so counting calls here would only risk disagreeing with
+ * it. The row is otherwise hidden by the reader, which is why this is the one place
+ * its counters are read.
+ */
+function subagentCount(snapshot: { nodes: { get(key: string): ChatConversationViewNode | undefined } }, keys: readonly string[]): number {
+  for (const key of keys) {
+    const node = snapshot.nodes.get(key);
+    if (!node || node.kind !== 'turn-process') continue;
+    const value = (node.data as { subagentCount?: unknown }).subagentCount;
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
 
 function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pick<ReaderProps, 'sessionId' | 'useChat' | 'useSessionStatus'> & { group: ReaderGroup; motion: boolean }) {
   const pending = useSessionStatus(snapshot => snapshot.get(sessionId)?.pendingInteraction);
@@ -266,7 +282,10 @@ function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pi
     if (pending !== undefined) return '等待你的操作';
     const current = turn.steps.at(-1)?.data.get('assistant-step');
     const last = current?.blocks.at(-1);
-    if (current?.status === 'running' && last?.kind === 'tool-call') return preparingLabel(last.name);
+    if (current?.status === 'running' && last?.kind === 'tool-call') {
+      const spawned = subagentCount(snapshot, group.keys);
+      return spawned ? `${preparingLabel(last.name)}·${spawned} 个子代理` : preparingLabel(last.name);
+    }
     for (let index = group.keys.length - 1; index >= 0; index--) {
       const node = snapshot.nodes.get(group.keys[index]);
       if (!node) continue;
@@ -483,7 +502,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     || liveItems.some(item => item.kind === 'fold'
       ? item.key === key || item.steps.some(step => step.key === key || ('nodeKey' in step && step.nodeKey === key))
       : item.key === key || ('nodeKey' in item.step && item.step.nodeKey === key)));
-  const expanded = holdingSelection || processExpanded(expansionChoice, boundary);
+  const expanded = !autoFold || holdingSelection || processExpanded(expansionChoice, boundary);
   const [foldOpenByKey, setFoldOpenByKey] = useState<Record<string, boolean>>({});
   const deliverables = useMemo(() => getTurnDeliverables(turn, flow), [turn, flow]);
   const fileMentions = useMemo(
@@ -526,10 +545,17 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     forkSeq,
     fileMentions,
     metrics,
+    getToolView: props.getToolView,
   };
   const terminal = terminalLabel(boundary.reason);
   const hasTurnError = flow.some(item => item.kind === 'node' && nodes.get(item.nodeKey)?.kind === 'turn-error');
-  const showTerminalNotice = terminal && !hasTurnError && boundary.reason !== 'interrupted' && boundary.reason !== 'aborted';
+  // A stopped turn normally stays quiet, but a stopped turn that produced no
+  // prose at all reads as if its answer vanished into the process fold. Say so.
+  const hasAnswerProse = steps.some(step => step.kind === 'body'
+    && step.blocks.some(block => block.kind === 'text' && block.text.trim() !== ''));
+  const stoppedWithoutAnswer = (boundary.reason === 'interrupted' || boundary.reason === 'aborted') && !hasAnswerProse;
+  const showTerminalNotice = terminal && !hasTurnError
+    && (stoppedWithoutAnswer || (boundary.reason !== 'interrupted' && boundary.reason !== 'aborted'));
   const renderStep = (step: LiveStep, folded: boolean) => {
     const processOpen = folded || expanded;
     if (step.kind === 'reasoning' || step.kind === 'body') return <BlockBoundary>
@@ -551,7 +577,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
       <Disclosure open={expanded} onChange={setExpanded} controls={flowId} buttonRef={processButton}
         label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />} />
     </StickyLane>}
-    {boundary.status === 'closed' && hasProcess && <ClosedProcessSummary open={expanded} onChange={setExpanded} controls={flowId}
+    {boundary.status === 'closed' && hasProcess && autoFold && <ClosedProcessSummary open={expanded} onChange={setExpanded} controls={flowId}
       steps={steps.filter(step => {
         if (step.kind === 'user') return false;
         if (step.kind !== 'body') return true;
@@ -589,7 +615,14 @@ export function Reader(props: ReaderProps) {
   const waitAnchor = waitingAnchor(order, key => nodes.get(key), pendingList);
   const motionPreference = props.useStore(state => state.motion);
   const motion = useMotionAllowed(motionPreference);
-  const autoFold = props.useStore(state => state.autoFold ?? true);
+  const prefsSnap = useSyncExternalStore(
+    props.openPrefs?.subscribe ?? ((fn: () => void) => { void fn; return () => {}; }),
+    () => props.openPrefs?.getSnapshot?.(),
+    () => undefined,
+  );
+  const storeAutoFold = props.useStore(state => state.autoFold);
+  const autoFold = prefsSnap?.autoFold ?? (prefsSnap?.foldIntensity !== undefined ? prefsSnap.foldIntensity !== 0 : undefined) ?? storeAutoFold ?? true;
+  const frostedGlass = frostedGlassOf(prefsSnap);
   const streamMotion = useMemo(() => ({ enabled: motion, activatedAt: activatedAt.current }), [motion]);
   const groups = useMemo(() => groupNodes(order, key => nodes.get(key)), [order, nodes, timeline]);
   const isAwaitingModel = useMemo(() => {
@@ -600,37 +633,29 @@ export function Reader(props: ReaderProps) {
 
     const lastKey = order.at(-1);
     const lastNode = lastKey ? nodes.get(lastKey) : undefined;
-    const lastIsUser = lastNode?.kind === 'user' || lastNode?.kind === 'steering';
+    if (!lastKey || !lastNode) return false;
 
-    // 2. 最后一个节点是用户发言（含补发消息）：检查该用户节点**之后**是否已有模型产出。
-    //    之前用 slice(1) 是 Bug——补发消息在组中部，前面的旧输出会让等待永远不出现。
-    if (lastIsUser && lastKey) {
-      const lastGroup = groups.at(-1);
-      const turn = lastGroup?.turn === null || lastGroup?.turn === undefined ? undefined : timeline.turns.get(lastGroup.turn);
-      if (turn?.status === 'closed') return false;
-      const keys = lastGroup?.keys ?? [];
-      const userIdx = keys.lastIndexOf(lastKey);
-      const hasOutputAfter = keys.slice(userIdx + 1).some(key => {
-        const node = nodes.get(key);
-        if (!node || node.visibility === 'hidden') return false;
-        if (node.kind === 'assistant-step') {
-          const data = node.data as { blocks?: unknown[] };
-          return Array.isArray(data.blocks) && data.blocks.length > 0;
-        }
-        return node.kind === 'tool-call' || node.kind === 'tool-return' || node.kind === 'command-input';
-      });
-      return !hasOutputAfter;
-    }
-
-    // 3. assistant-step 已创建但一个 block 都没有：模型收到请求、内容未吐出的瞬间。
-    if (lastNode?.kind === 'assistant-step') {
+    // 2. 模型已经产出内容：等待结束，计时器必须立刻消失。
+    //    「产出」= assistant-step 已带 block（正文/思维链/工具调用都算）。
+    if (lastNode.kind === 'assistant-step') {
       const data = lastNode.data as { status?: string; blocks?: unknown[] };
-      if (data.status === 'running' && (!data.blocks || data.blocks.length === 0)) {
-        return true;
-      }
+      const blocks = data.blocks ?? [];
+      // 空 block 且仍在跑 = 请求已发出、模型还没吐字，正是要计时的那一刻。
+      return blocks.length === 0 && data.status === 'running';
     }
 
-    return false;
+    // 3. 球在模型脚下：用户刚发言，或工具已返回、上下文已注入、命令已执行。
+    //    这些时刻模型随时可能卡住，正是要计时的地方；工具执行期间不计时，
+    //    因为那时忙的是工具而不是模型。
+    //    handsBackToModel 内部按 chat 层 kind 判定，并区分「工具已返回」与
+    //    「工具仍在跑」——后者不算等待。
+    const modelOwesResponse = handsBackToModel(lastNode);
+    if (!modelOwesResponse) return false;
+
+    // 轮次已结束就没什么可等的。
+    const lastGroup = groups.at(-1);
+    const turn = lastGroup?.turn === null || lastGroup?.turn === undefined ? undefined : timeline.turns.get(lastGroup.turn);
+    return turn?.status !== 'closed';
   }, [running, pendingList, order, nodes, groups, timeline]);
   // The reader must never be silent while the agent is working; see
   // `runningIndicator` for why the waiting indicator is the fallback for every
@@ -776,11 +801,22 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.3.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-better-display="0.4.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>
-        <button type="button" className={css.textButton} aria-pressed={autoFold} onClick={() => props.actions.setAutoFold(!autoFold)} title="新思考产生时，是否自动将此前步骤收拢为一行汇总。关闭后完整保留原始过程与流式输出。">{`自动折叠${autoFold ? '开' : '关'}`}</button>
+        <button
+          type="button"
+          className={css.textButton}
+          aria-pressed={autoFold}
+          onClick={() => {
+            props.actions.setAutoFold(!autoFold);
+            props.openPrefs?.actions?.setAutoFold?.(!autoFold);
+          }}
+          title="新思考产生时，是否自动将此前步骤收拢为一行汇总。关闭后完整保留原始过程与流式输出。"
+        >
+          {`自动折叠${autoFold ? '开' : '关'}`}
+        </button>
         <button type="button" className={css.textButton} aria-pressed={motionPreference} onClick={() => props.actions.setMotion(!motionPreference)} title="新到文字柔和显现，过程平滑展开；关闭后立即完整显示，自动遵循系统减少动态效果设置。">{motionPreference && !motion ? '动效 · 跟随系统关闭' : `动效${motionPreference ? '开' : '关'}`}</button>
       </StickyLane>
       {hasMore && <button type="button" className={css.historyButton} disabled={loadingOlder} onClick={async () => {

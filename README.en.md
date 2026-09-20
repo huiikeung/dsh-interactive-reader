@@ -2,11 +2,25 @@
 
 [中文](./README.md)
 
+Prefer npm (version-pinable):
+
+```sh
+dsh plugin --profile web add dsh-better-display@0.4.0
+```
+
+Or latest:
+
+```sh
+dsh plugin --profile web add dsh-better-display
+```
+
+Fallback: install from GitHub (tracks the default branch tip):
+
 ```sh
 dsh plugin --profile web add github:aa2246740/dsh-better-display
 ```
 
-You need official `dsh` (or `npx @deepseek-ai/dsh`) and **pnpm** on PATH. `dsh plugin add` runs pnpm in `$DSH_HOME/profiles/web`. This repo commits built `lib/`, so a git install does not need `prepare` or a profile `allowBuilds` entry.
+You need official `dsh` (or `npx @deepseek-ai/dsh`) and **pnpm** on PATH. `dsh plugin add` runs pnpm in `$DSH_HOME/profiles/web`. This repo commits built `lib/`, so git / npm installs do not need `prepare` or a profile `allowBuilds` entry.
 
 Then restart that Host and reload the page. `dsh plugin add` writes the profile. It does not hot-load a running process.
 
@@ -14,7 +28,9 @@ Adds a **阅读** tab to DeepSeek Harness. While a turn runs you see steps, thin
 
 Live turns **fold as they run**: process rows collapse into one counted summary line with a choreographed shrink, and that summary stays expandable after the turn closes. While an answer or confirmation is pending, the status line counts up from the latest human input; user messages and turn ends carry a local clock and duration.
 
-A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/). Settings → **Better Display** can preview deliverables in the right Sidebar (system app remains the default) and reports whether that skill is installed in a harness skill root.
+Tool calls that changed files carry `+A -R` statistics and open a per-file diff panel, and third-party tool cards registered in the host's `tool.call.toolview` slot render inside the reading view. Settings → **Better Display** also holds the translucent frosted glass toggle and a three-stop auto-fold intensity.
+
+A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/). Settings → **Better Display** can preview deliverables in the right Sidebar (system app remains the default), turn on translucent frosted glass (off by default), toggle process auto-folding (On is the default), and reports whether that skill is installed in a harness skill root.
 
 Targets DeepSeek Harness **0.1.6-alpha.2**. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`. New sessions default to reading.
 
@@ -22,7 +38,7 @@ From a local checkout or tarball:
 
 ```sh
 dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.3.0.tgz
+dsh plugin --profile web add ./dsh-better-display-0.4.0.tgz
 ```
 
 `dsh.bundle` is captured at Host boot. Do not also insert the same row by hand in the profile `cordis.patch.yml`, or it will mount twice.

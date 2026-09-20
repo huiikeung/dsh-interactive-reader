@@ -2,6 +2,13 @@ export type SettingsCopyKey =
   | 'nav'
   | 'openTitle'
   | 'openDescription'
+  | 'glassTitle'
+  | 'glassDescription'
+  | 'foldTitle'
+  | 'foldDescription'
+  | 'foldNone'
+  | 'foldStandard'
+  | 'foldSummary'
   | 'skillTitle'
   | 'skillInstalled'
   | 'skillMissing'
@@ -18,6 +25,13 @@ export const en: SettingsCopy = {
   nav: 'Better Display',
   openTitle: 'Open deliverables in built-in panel',
   openDescription: 'Off by default: chips and inline file mentions open in the system app. Turn this on to preview them in the right Sidebar, matching official chat. Reveal and folder actions still use the system file manager.',
+  glassTitle: 'Translucent frosted glass',
+  glassDescription: 'Off by default: reading chrome stays opaque, matching the current Host look. Turn this on to let wallpaper and skins show through the panel; path and count chips stay clear until hover or focus.',
+  foldTitle: 'Auto-fold process',
+  foldDescription: 'Default on: collapses earlier steps when new thoughts appear. Turn off to keep all thinking and tools expanded in full.',
+  foldNone: 'Off',
+  foldStandard: 'On',
+  foldSummary: 'Summary',
   skillTitle: 'generative-mcpapps skill',
   skillInstalled: 'Installed',
   skillMissing: 'Not detected',
@@ -33,6 +47,13 @@ export const zh: SettingsCopy = {
   nav: 'Better Display',
   openTitle: '在内置面板中打开产物',
   openDescription: '默认关闭：产物芯片和正文中的文件提及会用系统应用打开。打开后与官方对话一致，在右侧栏预览。访达 / 资源管理器中的显示与打开所在文件夹不受此开关控制。',
+  glassTitle: '半透明毛玻璃',
+  glassDescription: '默认关闭：阅读栏保持不透明，和现在的 Host 观感一致。打开后透出宿主壁纸与皮肤；路径、行数等标签静止时透明，悬停或聚焦才显出轮廓。',
+  foldTitle: '自动折叠过程',
+  foldDescription: '默认开启：新思考产生时自动折叠此前步骤。关闭后全程展开，完整保留原始思考与工具流。',
+  foldNone: '关闭',
+  foldStandard: '开启',
+  foldSummary: '摘要',
   skillTitle: 'generative-mcpapps 技能',
   skillInstalled: '已安装',
   skillMissing: '未检测到',

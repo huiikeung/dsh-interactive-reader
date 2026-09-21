@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.6.1
+
+Names the plugin in Chinese: **交互阅读**.
+
+The zh dictionary carried `Better Display` as well, so a Chinese Host showed an
+untranslated nav entry. The English name is unchanged and keeps the package
+identity.
+
+The name says what the section is rather than what it does for you: not an
+assistant, but an *interactive presentation of the same conversation*. Against the
+two native tabs it earns the word — 对话 is a passive bubble stream and 轨迹 a
+static log, while this view folds the process live, jumps between turns, expands
+diffs, locates produced files, and mounts MCP Apps cards that talk back to the
+composer over JSON-RPC.
+
+It appears when the Host language is 中文; an English Host still shows
+`Better Display`, which is the intended locale behaviour rather than a leftover.
+
+### The settings-nav icon
+
+The section also showed the settings gear, because DSH picks nav glyphs from a
+hard-coded `navIcon(id)` map inside `dsh-client-ui-settings-general` and the
+`settings.section` contract carries no icon field (`SettingsSectionOwnerProps` has
+only `close`) — an unknown id falls back to `IconSettingsOutline16`.
+Two complementary mechanisms pin it to `IconBrowseOutline16` — a page with text
+lines:
+
+- **Runtime pin (primary)**: `pinNavGlyph()` in the plugin's own bundle finds this
+  section's nav cell, rewrites its `<svg>` in place, and re-applies through a
+  MutationObserver when the shell re-renders the nav. It touches only its own cell,
+  depends on none of the shell's hashed class names, and therefore survives DSH
+  runtime updates and other plugins patching the same core file — which a core patch
+  cannot.
+- **Core patch (fallback)**: `scripts/patch-settings-icon.mjs` covers the window
+  before our bundle has run. It is idempotent, keeps a `.dsh-better-display.bak`,
+  self-checks that the patched bundle still parses, and on failure removes only its
+  own injected branch — restoring the whole `.bak` would also wipe every other
+  plugin's patch to that file, which was observed happening on this machine.
+
+180 tests, including assertions pinning the Chinese name, the locale resolution for
+both dictionaries, and the two dictionaries agreeing on every key.
+
 ## 0.6.0
 
 Redesigns the **Better Display** section in Settings after `dsh-vision-router`'s panel: the

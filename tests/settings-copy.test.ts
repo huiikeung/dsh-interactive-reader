@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { en, zh } from '../src/client/settings-copy.ts';
+import { en, settingsCopyFor, zh } from '../src/client/settings-copy.ts';
 import { CONVENTIONAL_SKILL_ROOTS, GENERATIVE_MCPAPPS_SKILL } from '../src/skill-status.ts';
 import { shortestInstallCommand } from '../src/client/skill-status.ts';
 
@@ -60,4 +60,32 @@ test('committed Settings UI copy and command stay relative', () => {
   assert.doesNotMatch(client, /root\.source, ": ", root\.path/);
   assert.doesNotMatch(client, /\/Users\//);
   assert.doesNotMatch(client, /C:\\\\/);
+});
+
+test('the Chinese section name is 交互阅读, not an English leftover', () => {
+  // The zh dictionary used to carry 'Better Display' too, so a Chinese Host showed an
+  // untranslated nav entry. The name is the plugin's Chinese identity: it is a
+  // presentation of the same conversation, not an assistant.
+  assert.equal(zh.nav, '交互阅读');
+  assert.equal(en.nav, 'Better Display', 'the English name keeps the package identity');
+  for (const copy of [zh, en]) {
+    assert.notEqual(copy.nav, '');
+  }
+});
+
+test('the locale dictionaries agree on every key', () => {
+  assert.deepEqual(Object.keys(zh).sort(), Object.keys(en).sort());
+});
+
+test('a Chinese Host resolves the Chinese name, an English Host the English one', () => {
+  // This is the resolution the settings nav actually runs:
+  //   locale.bind('better-display')?.('nav') || settingsCopyFor(languageTag(ctx)).nav
+  // Both halves read the same dictionaries, so a Chinese Host must show 交互阅读.
+  for (const tag of ['zh-CN', 'zh', 'zh-TW', 'ZH-cn']) {
+    assert.equal(settingsCopyFor(tag).nav, '交互阅读', tag);
+    assert.match(settingsCopyFor(tag).openTitle, /内置面板/, tag);
+  }
+  for (const tag of ['en-US', 'en', 'en-GB', undefined]) {
+    assert.equal(settingsCopyFor(tag).nav, 'Better Display', String(tag));
+  }
 });

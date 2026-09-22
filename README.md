@@ -75,10 +75,12 @@ DSH 给设置分区画图标用的是一段硬编码的 `navIcon(id)`（在核�
 `IconSettingsOutline16` 齿轮。`settings.section` 的注册契约**没有 icon 字段**
 （`SettingsSectionOwnerProps` 只有 `close`），所以插件无法自备图标。
 
-本插件的做法是**运行时钉**：`src/client/index.tsx` 的 `pinNavGlyph()` 在自己的 bundle
-里，按标签文本（「交互阅读」/「Interactive Reader」）找到设置导航里属于本分区的那一格，
+本插件的做法是**运行时钉**：[`src/client/nav-glyph.ts`](src/client/nav-glyph.ts) 的
+`pinNavGlyph()` 在自己的 bundle 里（由 `src/client/index.tsx` 的 `apply()` 调用），按标签文本
+（「交互阅读」/「Interactive Reader」）找到设置导航里属于本分区的那一格，
 **就地重写它的 `<svg>` 几何**，钉成 `IconBrowseOutline16`（一页文档加几条文本线），并用
-`MutationObserver` 在壳重绘导航时重新贴回去。
+`MutationObserver` 在壳重绘导航时重新贴回去。行为由 `tests/nav-glyph.test.ts` 的假 DOM 单测覆盖，
+其中一条回归测试盯住「钉的标签必须和设置分区实际注册的导航标签一致」。
 
 因为只碰自己那一格、不依赖壳的 hashed 类名、也**不改 DSH 核心文件**：
 

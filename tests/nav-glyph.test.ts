@@ -1,5 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { navGlyph, pinNavGlyph } from '../src/client/nav-glyph.js';
 
 const MARK = 'data-interactive-reader-nav-icon';
@@ -237,4 +240,20 @@ test('a Node/test environment without document or MutationObserver is a no-op', 
   } finally {
     withoutDom.restore();
   }
+});
+
+test('apply() pins exactly the labels the settings nav renders', () => {
+  // The cell is matched by its rendered text, so the pin labels must stay in sync
+  // with the dictionaries the section registers — otherwise the gear silently
+  // comes back for that locale.
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+  const entry = readFileSync(resolve(root, 'src/client/index.tsx'), 'utf8');
+  const copy = readFileSync(resolve(root, 'src/client/settings-copy.ts'), 'utf8');
+  const navLabels = [...copy.matchAll(/nav:\s*'([^']+)'/g)].map(match => match[1]);
+  assert.deepEqual([...navLabels].sort(), [...LABELS].sort());
+  const call = /pinNavGlyph\(\[([^\]]*)\],\s*'([^']+)'/.exec(entry);
+  assert.ok(call, 'apply() must call pinNavGlyph with a label list and a mark');
+  const pinned = [...call[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+  assert.deepEqual([...pinned].sort(), [...navLabels].sort());
+  assert.equal(call[2], MARK);
 });

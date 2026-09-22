@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.6.2
+
+Drops the core patch and keeps only the runtime nav-glyph pin.
+
+0.6.1 pinned the settings icon with two mechanisms: a runtime pin and a patch to the
+core `navIcon(id)` map. The core patch turned out to be the wrong half to keep — it
+edits a file several plugins patch, so a DSH runtime re-extract or another plugin
+installing or removing its own branch silently wipes it, and this machine was
+observed to do exactly that to three other plugins at once. It is now gone:
+`scripts/patch-settings-icon.mjs` is deleted and the branch it had written into
+`dsh-client-ui-settings-general` is removed, leaving that bundle as shipped.
+
+What remains is the runtime pin in `pinNavGlyph()`, which locates this section's own
+nav cell by its label text, rewrites that cell's `<svg>` geometry in place, and
+re-applies through a MutationObserver when the shell re-renders the nav. It touches
+only its own cell, depends on none of the shell's hashed class names, and never edits
+DSH core, so a runtime update cannot lose it and no other plugin can clobber it.
+
+Verified with the core bundle back to its shipped state: the icon still renders, and
+still renders after closing and reopening the settings panel.
+
+180 tests pass; typecheck clean.
+
 ## 0.6.1
 
 Names the plugin in Chinese: **交互阅读**.

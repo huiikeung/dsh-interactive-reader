@@ -5,7 +5,7 @@
 推荐用 npm（可钉版本）：
 
 ```sh
-dsh plugin --profile web add dsh-better-display@0.6.1
+dsh plugin --profile web add dsh-better-display@0.6.2
 ```
 
 也可以装 latest：
@@ -40,7 +40,7 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 ```sh
 dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.6.1.tgz
+dsh plugin --profile web add ./dsh-better-display-0.6.2.tgz
 ```
 
 `dsh.bundle` 是开机捕获的。不要再往 profile 的 `cordis.patch.yml` 手写同一条 insert，会重复挂载。
@@ -75,23 +75,17 @@ DSH 给设置分区画图标用的是一段硬编码的 `navIcon(id)`（在核�
 `IconSettingsOutline16` 齿轮。`settings.section` 的注册契约**没有 icon 字段**
 （`SettingsSectionOwnerProps` 只有 `close`），所以插件无法自备图标。
 
-本插件用**两条互补**的路径把 `better-display` 钉到 `IconBrowseOutline16`（一页文档加
-几条文本线）：
+本插件的做法是**运行时钉**：`src/client/index.tsx` 的 `pinNavGlyph()` 在自己的 bundle
+里，按标签文本（「交互阅读」/「Better Display」）找到设置导航里属于本分区的那一格，
+**就地重写它的 `<svg>` 几何**，钉成 `IconBrowseOutline16`（一页文档加几条文本线），并用
+`MutationObserver` 在壳重绘导航时重新贴回去。
 
-1. **运行时钉（主力）**：`src/client/index.tsx` 的 `pinNavGlyph()` 在自己的 bundle 里
-   找到设置导航里属于本分区的那一格，就地重写它的 `<svg>`，并用 `MutationObserver`
-   在壳重绘导航时重新贴回去。它只碰自己的格子、不依赖壳的 hashed 类名，因此
-   **不受 DSH 运行时升级影响，也不会和其他插件改同一个核心文件**。
-2. **核心补丁（兜底）**：[`scripts/patch-settings-icon.mjs`](scripts/patch-settings-icon.mjs)
-   给核心 bundle 打一个小补丁，覆盖 bundle 尚未加载完成的那一小段窗口。
+因为只碰自己那一格、不依赖壳的 hashed 类名、也**不改 DSH 核心文件**：
 
-```sh
-node scripts/patch-settings-icon.mjs
-```
-
-补丁脚本幂等、首次打之前存 `.dsh-better-display.bak`、写入后自检语法并在失败时
-**只删除自己注入的那一支**（整包还原会连带抹掉其他插件对同一文件的补丁，本机实测发生过）。
-卸载本插件无残留副作用，`.bak` 可留着回退。
+- 不受 DSH 运行时升级影响（node_modules 被替换也无所谓）；
+- 不会和其他插件争抢同一个核心文件——本机实测多个插件补同一个 `navIcon` 时会互相抹掉；
+- 图标标记 `data-better-display-nav-icon` 保证不会重复贴；
+- `glyph()` 在任何 DOM 改动之前就跑完，所以就算它抛错，壳自己的齿轮也还在，导航格不会空白。
 
 ### 在 Harness 检出里开发（可选）
 

@@ -1,5 +1,5 @@
-id: dsh-better-display
-entry: src/dsh-better-display.ts
-marker: '[my-plugins/dsh-better-display] loaded'
+id: dsh-interactive-reader
+entry: src/dsh-interactive-reader.ts
+marker: '[my-plugins/dsh-interactive-reader] loaded'
 kind: client
 profile: web

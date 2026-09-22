@@ -78,14 +78,14 @@ export async function openDeliverableFile(args: {
   const useSidebar = args.mode === 'sidebar' && !isFolderOpenPath(args.path);
   if (useSidebar) {
     if (typeof args.openSidebar !== 'function') {
-      args.warn?.('[dsh-better-display] sidebarRight.openResource is not available; falling back to system app');
+      args.warn?.('[dsh-interactive-reader] sidebarRight.openResource is not available; falling back to system app');
     } else {
       try {
         const address = (args.fileAddressFor ?? fileAddressFor)(args.sessionId, args.cwd, args.path);
         args.openSidebar(address);
         return 'sidebar';
       } catch (error) {
-        args.warn?.('[dsh-better-display] sidebar open failed; falling back to system app', error);
+        args.warn?.('[dsh-interactive-reader] sidebar open failed; falling back to system app', error);
       }
     }
   }

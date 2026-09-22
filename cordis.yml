@@ -1,4 +1,4 @@
 # Source overlay for local --patch work. Stock install uses cordis.patch.yml.
 - insert:
-    - id: dsh-better-display
-      name: './src/dsh-better-display.ts'
+    - id: dsh-interactive-reader
+      name: './src/dsh-interactive-reader.ts'

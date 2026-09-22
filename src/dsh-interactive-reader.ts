@@ -15,7 +15,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-export const name = 'dsh-better-display';
+export const name = 'dsh-interactive-reader';
 export const inject = ['webServer'];
 
 function writeJson(res: ServerResponse, status: number, body: unknown): void {
@@ -31,13 +31,13 @@ function skillLister(ctx: Context): (() => Promise<readonly { readonly name?: st
 }
 
 export function apply(ctx: Context): void {
-  console.log('[my-plugins/dsh-better-display] loaded');
+  console.log('[my-plugins/dsh-interactive-reader] loaded');
 
   if (ctx.webServer) {
     ctx.effect(() => {
       const disposeSkill = ctx.webServer!.register({
         kind: 'exact',
-        path: '/better-display/skill-status',
+        path: '/interactive-reader/skill-status',
         handler: async (req, res) => {
           if (req.method !== 'GET') {
             res.statusCode = 405;
@@ -60,6 +60,6 @@ export function apply(ctx: Context): void {
       return () => {
         disposeSkill();
       };
-    }, 'dsh-better-display: skill-status route');
+    }, 'dsh-interactive-reader: skill-status route');
   }
 }

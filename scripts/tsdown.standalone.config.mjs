@@ -269,7 +269,7 @@ const cssModulesPlugin = {
   async load(virtualId) {
     if (!virtualId.startsWith(CSS_MODULE_PREFIX)) return null
     const path = virtualId.slice(CSS_MODULE_PREFIX.length, -VIRTUAL_SUFFIX.length)
-    if (!existsSync(path)) throw new Error(`dsh-better-display build: missing stylesheet ${path}`)
+    if (!existsSync(path)) throw new Error(`dsh-interactive-reader build: missing stylesheet ${path}`)
     this.addWatchFile(path)
     const { css, classMap } = scopeCssModules(await readFile(path, 'utf8'), styleHash(path))
     return styleModule(path, css, classMap)
@@ -340,7 +340,7 @@ const clientConfig = {
 const hostConfig = {
   name: packageId,
   cwd: packageRoot,
-  entry: ['src/dsh-better-display.ts'],
+  entry: ['src/dsh-interactive-reader.ts'],
   outDir: 'lib',
   format: ['esm'],
   platform: 'node',

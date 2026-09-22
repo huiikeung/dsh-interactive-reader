@@ -1,5 +1,5 @@
 /**
- * Slot types the Better Display settings page registers into.
+ * Slot types the Interactive Reader settings page registers into.
  *
  * `settings.section` is declared by the shell's own settings package; importing
  * it for types keeps the owner share (`{ close }`) tied to the real contract
@@ -12,6 +12,6 @@ import type { SettingsCopyKey } from './settings-copy.js';
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    'better-display': SettingsCopyKey;
+    'interactive-reader': SettingsCopyKey;
   }
 }

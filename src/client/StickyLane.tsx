@@ -6,7 +6,7 @@ export function StickyLane({ kind, className, children }: { kind: 'toolbar' | 's
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const el = ref.current;
-    const scope = el?.closest<HTMLElement>(kind === 'toolbar' ? '[data-dsh-better-display]' : '[data-reader-turn]');
+    const scope = el?.closest<HTMLElement>(kind === 'toolbar' ? '[data-dsh-interactive-reader]' : '[data-reader-turn]');
     if (!el || !scope) return;
     const property = kind === 'toolbar' ? '--reader-toolbar-height' : '--reader-status-height';
     const update = () => {

@@ -19,12 +19,12 @@ const adapter = join(resolveHarness(), 'tools/dshx/src/client-build.js');
 if (!existsSync(adapter)) throw new Error('externalClientBundle adapter is missing.');
 const { externalClientBundle } = await import(pathToFileURL(adapter).href);
 
-const bundle = externalClientBundle('dsh-better-display', ['src/dsh-better-display.ts'], {
+const bundle = externalClientBundle('dsh-interactive-reader', ['src/dsh-interactive-reader.ts'], {
   clientEntry: 'src/client/index.tsx',
 }) as UserConfig[];
 
 const portableOutput: TsdownPlugin = {
-  name: 'dsh-better-display-portable-output',
+  name: 'dsh-interactive-reader-portable-output',
   generateBundle(_options, output) {
     const client = output['client.js'];
     if (client?.type !== 'chunk') this.error('client.js was not emitted');
@@ -39,7 +39,7 @@ const portableOutput: TsdownPlugin = {
 };
 
 export default bundle.map((config) => {
-  if (config.name !== 'dsh-better-display/client') return config;
+  if (config.name !== 'dsh-interactive-reader/client') return config;
   const plugins = Array.isArray(config.plugins)
     ? config.plugins
     : config.plugins === undefined

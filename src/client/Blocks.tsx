@@ -133,7 +133,7 @@ export const Blocks = memo(function Blocks({ blocks, streaming = false, source =
   return <ComposerFillContext.Provider value={fillComposer}>
     <div className={css.blocks} data-streaming={streaming || undefined}>
       {blocks.map((block, index) => <BlockBoundary key={block.kind === 'image' ? `image:${block.attachment.attachmentId}:${index}` : `${index}:${block.kind}`}>
-        <Fragment>{renderSlotChain('dsh-better-display.block', { block, streaming, source }, { fallback: fallback(block, streaming, source, loadImage, fillComposer, holdFormatting, { startedAt, interrupted, liveText }, fileMentions) })}</Fragment>
+        <Fragment>{renderSlotChain('dsh-interactive-reader.block', { block, streaming, source }, { fallback: fallback(block, streaming, source, loadImage, fillComposer, holdFormatting, { startedAt, interrupted, liveText }, fileMentions) })}</Fragment>
       </BlockBoundary>)}
     </div>
   </ComposerFillContext.Provider>;

@@ -3,7 +3,7 @@ import { type DeliverableOpenMode } from './open-file.js';
 import { type SettingsCopy, type SettingsCopyKey } from './settings-copy.js';
 import { type SkillStatusProbe } from './skill-status.js';
 /**
- * The Better Display section.
+ * The Interactive Reader section.
  *
  * The section title sits outside any border, and **each module carries its own** — so the
  * panel reads as a list of independent settings instead of one slab. Modules whose body is

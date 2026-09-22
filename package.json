@@ -1,15 +1,15 @@
 {
-  "name": "dsh-better-display",
-  "version": "0.6.2",
+  "name": "dsh-interactive-reader",
+  "version": "0.7.0",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",
-  "main": "lib/dsh-better-display.js",
-  "types": "lib/types/dsh-better-display.d.ts",
+  "main": "lib/dsh-interactive-reader.js",
+  "types": "lib/types/dsh-interactive-reader.d.ts",
   "exports": {
     ".": {
-      "types": "./lib/types/dsh-better-display.d.ts",
-      "default": "./lib/dsh-better-display.js"
+      "types": "./lib/types/dsh-interactive-reader.d.ts",
+      "default": "./lib/dsh-interactive-reader.js"
     },
     "./client": {
       "types": "./lib/types/client/index.d.ts",
@@ -106,11 +106,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/aa2246740/dsh-better-display.git"
+    "url": "git+https://github.com/huiikeung/dsh-interactive-reader.git"
   },
-  "homepage": "https://github.com/aa2246740/dsh-better-display#readme",
+  "homepage": "https://github.com/huiikeung/dsh-interactive-reader#readme",
   "bugs": {
-    "url": "https://github.com/aa2246740/dsh-better-display/issues"
+    "url": "https://github.com/huiikeung/dsh-interactive-reader/issues"
   },
   "keywords": [
     "deepseek-harness",

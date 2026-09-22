@@ -8,10 +8,10 @@
  * refuses every other scheme), so the pane owns a resource *type* under that scheme
  * rather than a scheme of its own.
  */
-export declare const FOLDER_TAB_ID = "dsh-better-display.folder";
-export declare const FOLDER_TAB_KIND = "better-display-folder";
+export declare const FOLDER_TAB_ID = "dsh-interactive-reader.folder";
+export declare const FOLDER_TAB_KIND = "interactive-reader-folder";
 /** The one scheme the shell's tab service accepts. */
-export declare const FOLDER_ADDRESS_PREFIX = "dsh-resource://better-display-folder/";
+export declare const FOLDER_ADDRESS_PREFIX = "dsh-resource://interactive-reader-folder/";
 /** The address that opens one folder in this pane. */
 export declare function folderAddressOf(absolutePath: string): string;
 /** The folder an address points at, or `null` when it is not one of ours. */

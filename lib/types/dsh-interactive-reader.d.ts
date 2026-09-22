@@ -11,7 +11,7 @@ declare module '@deepseek-ai/cordis' {
         };
     }
 }
-export declare const name = "dsh-better-display";
+export declare const name = "dsh-interactive-reader";
 export declare const inject: string[];
 export declare function apply(ctx: Context): void;
-//# sourceMappingURL=dsh-better-display.d.ts.map
+//# sourceMappingURL=dsh-interactive-reader.d.ts.map

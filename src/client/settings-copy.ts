@@ -27,7 +27,7 @@ export type SettingsCopyKey =
 export type SettingsCopy = Record<SettingsCopyKey, string>;
 
 export const en: SettingsCopy = {
-  nav: 'Better Display',
+  nav: 'Interactive Reader',
   sectionSubtitle: 'How the reading view looks, folds, and opens produced files.',
   openTitle: 'Open deliverables in built-in panel',
   openDescription: 'Off by default: chips and inline file mentions open in the system app. Turn this on to preview them in the right Sidebar, matching official chat. Reveal and folder actions still use the system file manager.',

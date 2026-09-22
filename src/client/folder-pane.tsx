@@ -92,7 +92,7 @@ export const FolderPaneBody = memo(function FolderPaneBody({ useTabInfo, session
   };
 
   return (
-    <div className={css.pane} data-better-display-folder-pane data-folder={current}>
+    <div className={css.pane} data-interactive-reader-folder-pane data-folder={current}>
       <div className={css.header}>
         {parent !== null && (
           <button
@@ -190,7 +190,7 @@ export function installFolderPane(ctx: Context): void {
     ?? ((ctx.get?.('remote') as unknown as { workspaceFiles?: WorkspaceFilesFace } | undefined)?.workspaceFiles);
   const slots = ctx.slots as unknown as SlotsFace;
 
-  ctx.effect(() => tabs.register!(folderTabDefinition) as unknown as Disposer, 'dsh-better-display: folder pane tab type');
+  ctx.effect(() => tabs.register!(folderTabDefinition) as unknown as Disposer, 'dsh-interactive-reader: folder pane tab type');
   ctx.effect(() => slots.inject('sidebar.right.pane.tab', () => slots.register({
     name: 'sidebar.right.pane.tab',
     key: FOLDER_TAB_ID,
@@ -205,5 +205,5 @@ export function installFolderPane(ctx: Context): void {
         return answer.value;
       },
     }),
-  }, FolderPaneBody)) as unknown as Disposer, 'dsh-better-display: folder pane body');
+  }, FolderPaneBody)) as unknown as Disposer, 'dsh-interactive-reader: folder pane body');
 }

@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.0
+
+Renamed: **`dsh-better-display` → `dsh-interactive-reader`**.
+
+Not cosmetic. `dsh-better-display` on npm belongs to the upstream `aa2246740` (latest
+0.3.0), so this fork could never publish under it — and the inherited README told
+people to install `github:aa2246740/dsh-better-display`, i.e. the upstream's code
+rather than ours. The name also said nothing: it is a reading view, not a display
+tweak. `dsh-interactive-reader` matches the Chinese name 交互阅读 and the 阅读 tab.
+
+Everything that carried the old name moved with it: the package name, `main` /
+`types` paths, the host entry and its output (`lib/dsh-interactive-reader.js`),
+the client bundle id, the plugin id in `cordis.yml` / `cordis.patch.yml` /
+`dshx.yml`, the `dsh-interactive-reader.block` slot key, the
+`data-interactive-reader` DOM attribute and its `data-interactive-reader-*`
+setting hooks, the locale namespace, log prefixes, the settings nav
+(`Interactive Reader` / 交互阅读), the nav-glyph label match, and the README
+install lines — which now point at `github:huiikeung/dsh-interactive-reader`
+instead of the upstream.
+
+**Deliberately NOT renamed: the store persistence key stays `dsh.reader.v1`.**
+Changing it would silently drop every user's frosted-glass, fold-intensity and
+open-mode settings on upgrade. There is a test pinning it.
+
+The settings-nav icon guards this too: `dsh-interactive-reader` is another id the
+core `navIcon()` map does not know, so the runtime pin in `pinNavGlyph()` is what
+keeps it off the gear fallback — the same mechanism 0.6.2 settled on, now keyed to
+the new label and mark attribute.
+
+187 tests pass; typecheck clean. The README's install assertions now derive the
+repo slug from `package.json` instead of hard-coding an owner, so they cannot go
+stale on the next rename.
+
+### Migrating an existing install
+
+The package name changed, so a `link:` install must be re-pointed. From the
+profile directory (`$DSH_HOME/profiles/web`), or with `dsh plugin`:
+
+```sh
+# profile/package.json: dependencies
+"dsh-interactive-reader": "link:/path/to/dsh-interactive-reader"
+# profile/package.json: dsh.profile.bundles — replace the old entry in place
+# node_modules: point the symlink at the renamed directory
+```
+
+Then restart the Host and reload. Client-side changes alone do not need a restart,
+but the bundle id does.
+
 ## 0.6.2
 
 Drops the core patch and keeps only the runtime nav-glyph pin.
@@ -27,7 +75,7 @@ still renders after closing and reopening the settings panel.
 
 Names the plugin in Chinese: **交互阅读**.
 
-The zh dictionary carried `Better Display` as well, so a Chinese Host showed an
+The zh dictionary carried `Interactive Reader` as well, so a Chinese Host showed an
 untranslated nav entry. The English name is unchanged and keeps the package
 identity.
 
@@ -39,7 +87,7 @@ diffs, locates produced files, and mounts MCP Apps cards that talk back to the
 composer over JSON-RPC.
 
 It appears when the Host language is 中文; an English Host still shows
-`Better Display`, which is the intended locale behaviour rather than a leftover.
+`Interactive Reader`, which is the intended locale behaviour rather than a leftover.
 
 ### The settings-nav icon
 
@@ -57,7 +105,7 @@ lines:
   runtime updates and other plugins patching the same core file — which a core patch
   cannot.
 - **Core patch (fallback)**: `scripts/patch-settings-icon.mjs` covers the window
-  before our bundle has run. It is idempotent, keeps a `.dsh-better-display.bak`,
+  before our bundle has run. It is idempotent, keeps a `.dsh-interactive-reader.bak`,
   self-checks that the patched bundle still parses, and on failure removes only its
   own injected branch — restoring the whole `.bak` would also wipe every other
   plugin's patch to that file, which was observed happening on this machine.
@@ -67,10 +115,10 @@ both dictionaries, and the two dictionaries agreeing on every key.
 
 ## 0.6.0
 
-Redesigns the **Better Display** section in Settings after `dsh-vision-router`'s panel: the
+Redesigns the **Interactive Reader** section in Settings after `dsh-vision-router`'s panel: the
 title sits outside any border, **each module is its own bordered box**, and a module whose
 body is long opens on a click. Presentation only — every switch, field and action keeps the
-behaviour and the `data-better-display-*` hooks it had.
+behaviour and the `data-interactive-reader-*` hooks it had.
 
 ### What was wrong
 
@@ -85,7 +133,7 @@ behaviour and the `data-better-display-*` hooks it had.
 
 ### What it looks like now
 
-- **The title carries no border**: `Better Display` plus a muted subtitle stand above the
+- **The title carries no border**: `Interactive Reader` plus a muted subtitle stand above the
   boxes, like the reference's own section heading.
 - **One border per module**: each setting is its own 12px-radius box with a `border-l2`
   hairline (`l1` is 4% black and a white box on a white panel needs an edge you can see),
@@ -170,7 +218,7 @@ it a real target on this headless fnOS NAS.
 - The reveal itself goes through `session.openWorkspacePath({ path, action: 'reveal' })`,
   so Finder selects the file, Explorer selects it, and a desktop Linux Host opens its
   parent — the Host owns the platform difference.
-- The plugin's `/better-display/reveal` route and its `child_process` spawn are gone.
+- The plugin's `/interactive-reader/reveal` route and its `child_process` spawn are gone.
 - Wording follows the Host's own `fileManager` (访达 / 文件资源管理器 / 文件管理器).
 
 ### What each Host does now
@@ -192,7 +240,7 @@ it a real target on this headless fnOS NAS.
 DSH cannot point its own files tree at a path — that type is a builtin page with no
 `patterns`/`canOpen`, so it is never an address candidate, and its root comes from the
 session rather than from the open call. So the plugin ships its own address-routed tab
-type (`dsh-resource://better-display-folder/…`, the only scheme the shell routes),
+type (`dsh-resource://interactive-reader-folder/…`, the only scheme the shell routes),
 registers its body under `sidebar.right.pane.tab` keyed by the type id, and reads the
 address through the seat-injected `useTabInfo()`. Content comes from the official
 `workspaceFiles.list` Remote, which keeps listings workspace-scoped and capped, so the
@@ -215,7 +263,7 @@ no tab registry, which degrades to copying the path instead of failing the plugi
 
 ## 0.4.0
 
-Merges upstream `aa2246740/dsh-better-display` main (`066f10a`, released there as v0.2.1) on top of
+Merges upstream `aa2246740/dsh-interactive-reader` main (`066f10a`, released there as v0.2.1) on top of
 our 0.3.0, then re-applies the 0.1.6-alpha.2 contract migration to the merged code. Upstream's own
 release notes for those two versions live in the upstream repository; this entry records what we
 took, what we kept, and what had to be re-migrated. Everything below is on top of 0.3.0.
@@ -309,7 +357,7 @@ took, what we kept, and what had to be re-migrated. Everything below is on top o
 
 ## 0.3.0
 
-Merges upstream `aa2246740/dsh-better-display` main (`933a45c`, released there as v0.1.1) on top of
+Merges upstream `aa2246740/dsh-interactive-reader` main (`933a45c`, released there as v0.1.1) on top of
 our 0.1.6-alpha.2 work, then re-applies the 0.1.6 contract migration to the merged code.
 
 ### Live folding and reading chrome
@@ -335,12 +383,12 @@ our 0.1.6-alpha.2 work, then re-applies the 0.1.6 contract migration to the merg
 
 ### Settings, deliverables and skills
 
-- **Better Display settings section**: deliverables open in the system app by default, with an
+- **Interactive Reader settings section**: deliverables open in the system app by default, with an
   optional right-Sidebar preview, plus generative-mcpapps skill detection and install guidance.
 - **Sidebar preview**: uses the shell's `sidebarRight.openResource` with session-scoped
   `dsh-resource://file/session/<id>/…` addresses from the official
   `@deepseek-ai/dsh-util-workspace-path` helper.
-- **Skill status route**: `/better-display/skill-status` reports whether the generative-mcpapps
+- **Skill status route**: `/interactive-reader/skill-status` reports whether the generative-mcpapps
   skill is installed in a conventional role, and install guidance names only relative roots
   (`.dsh/skills`, `.agents/skills`).
 
@@ -412,7 +460,7 @@ Adds native generative MCP Apps (SEP-1865) support and rich interactive renderin
 
 ## 0.1.0
 
-First public release of the accepted reading-view plugin, published as `dsh-better-display`.
+First public release of the accepted reading-view plugin, published as `dsh-interactive-reader`.
 
 - Native context and tool details with source-ordered, unmodified reasoning.
 - Bounded long-reasoning cards with two-line following, expanded follow and manual pause/resume.

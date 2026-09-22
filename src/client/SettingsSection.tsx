@@ -8,7 +8,7 @@ import { CONVENTIONAL_SKILL_ROOTS, detectGenerativeMcpappsSkill, shortestInstall
 import css from './SettingsSection.module.css';
 
 /**
- * The Better Display section.
+ * The Interactive Reader section.
  *
  * The section title sits outside any border, and **each module carries its own** — so the
  * panel reads as a list of independent settings instead of one slab. Modules whose body is
@@ -168,7 +168,7 @@ export function SettingsSection(props: SettingsProps) {
   useEffect(() => { void recheck(); }, [recheck]);
 
   return (
-    <div className={css.section} data-better-display-settings>
+    <div className={css.section} data-interactive-reader-settings>
       <header className={css.header}>
         <div className={css.headerTitle}>{text(props, copy, 'nav')}</div>
         <p className={css.headerDesc}>{text(props, copy, 'sectionSubtitle')}</p>
@@ -178,7 +178,7 @@ export function SettingsSection(props: SettingsProps) {
         title={text(props, copy, 'openTitle')}
         description={text(props, copy, 'openDescription')}
         checked={on}
-        data-better-display-open-mode={mode}
+        data-interactive-reader-open-mode={mode}
         onChange={next => { props.prefs.actions.setDeliverableOpenMode(next ? 'sidebar' : 'external'); }}
       />
 
@@ -186,7 +186,7 @@ export function SettingsSection(props: SettingsProps) {
         title={text(props, copy, 'glassTitle')}
         description={text(props, copy, 'glassDescription')}
         checked={glass}
-        data-better-display-glass={glass ? 'on' : 'off'}
+        data-interactive-reader-glass={glass ? 'on' : 'off'}
         onChange={next => { props.prefs.actions.setFrostedGlass(next); }}
       />
 
@@ -194,7 +194,7 @@ export function SettingsSection(props: SettingsProps) {
         title={text(props, copy, 'foldTitle')}
         description={text(props, copy, 'foldDescription')}
         checked={autoFold}
-        data-better-display-auto-fold={autoFold ? 'on' : 'off'}
+        data-interactive-reader-auto-fold={autoFold ? 'on' : 'off'}
         onChange={next => {
           props.prefs.actions.setAutoFold?.(next);
           props.prefs.actions.setFoldIntensity?.(next ? 1 : 0);
@@ -203,7 +203,7 @@ export function SettingsSection(props: SettingsProps) {
 
       <FoldModule
         title={text(props, copy, 'fnosTitle')}
-        data-better-display-fnos
+        data-interactive-reader-fnos
         data-fnos-configured={fnosUrl.trim() !== '' || undefined}
       >
         <p className={css.moduleDesc}>{text(props, copy, 'fnosDescription')}</p>
@@ -230,7 +230,7 @@ export function SettingsSection(props: SettingsProps) {
             {skill?.installed ? text(props, copy, 'skillInstalled') : text(props, copy, 'skillMissing')}
           </Tag>
         }
-        data-better-display-skill={skill?.installed ? 'installed' : 'missing'}
+        data-interactive-reader-skill={skill?.installed ? 'installed' : 'missing'}
       >
         <p className={css.moduleDesc}>{text(props, copy, 'skillPurpose')}</p>
         <p className={css.moduleDesc}>{text(props, copy, 'skillPluginNote')}</p>
@@ -238,7 +238,7 @@ export function SettingsSection(props: SettingsProps) {
           <>
             <p className={css.moduleDesc}>{skill.hostReached ? text(props, copy, 'skillInstall') : text(props, copy, 'skillUnavailable')}</p>
             <pre className={css.pre}>{shortestInstallCommand()}</pre>
-            <ul className={css.roots} data-better-display-skill-roots>
+            <ul className={css.roots} data-interactive-reader-skill-roots>
               {CONVENTIONAL_SKILL_ROOTS.map(root => (
                 <li key={root}>{root}</li>
               ))}

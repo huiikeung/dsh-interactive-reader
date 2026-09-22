@@ -1,6 +1,6 @@
-# dsh-better-display Web profile layer.
+# dsh-interactive-reader Web profile layer.
 # `dsh plugin add` applies this into the profile; rows resolve by package name
 # so the installed copy is what boots.
 - insert:
-    - id: dsh-better-display
-      name: dsh-better-display
+    - id: dsh-interactive-reader
+      name: dsh-interactive-reader

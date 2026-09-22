@@ -45,14 +45,14 @@ test('the chip names the folder', () => {
 });
 
 test('the tab definition claims exactly our addresses', () => {
-  assert.equal(folderTabDefinition.id, 'dsh-better-display.folder');
-  assert.equal(folderTabDefinition.kind, 'better-display-folder');
-  assert.deepEqual(folderTabDefinition.patterns, ['dsh-resource://better-display-folder/**']);
+  assert.equal(folderTabDefinition.id, 'dsh-interactive-reader.folder');
+  assert.equal(folderTabDefinition.kind, 'interactive-reader-folder');
+  assert.deepEqual(folderTabDefinition.patterns, ['dsh-resource://interactive-reader-folder/**']);
   // A third-party type's band; naming it keeps it stable if the default changes.
   assert.equal(folderTabDefinition.priority, 'extension');
   assert.equal(folderTabDefinition.canOpen(folderAddressOf('/vol1/1000')), true);
   assert.equal(folderTabDefinition.canOpen('dsh-resource://file/session/s1/a.txt'), false);
-  assert.equal(folderTabDefinition.canOpen('dsh-resource://better-display-folder-other/x'), false);
+  assert.equal(folderTabDefinition.canOpen('dsh-resource://interactive-reader-folder-other/x'), false);
 });
 
 test('directories sort before files, then by a numeric-aware name order', () => {

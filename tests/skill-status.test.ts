@@ -33,16 +33,16 @@ test('only the kebab-case skill name counts as installed', () => {
 
 test('plugin-tree skills/ is not a harness skill root', () => {
   const roots = [
-    ...projectSkillRoots('/plugin/dsh-better-display'),
+    ...projectSkillRoots('/plugin/dsh-interactive-reader'),
     ...userSkillRoots({ DSH_HOME: '/home/me/.dsh', DSH_AGENTS_HOME: '/home/me/.agents' }, '/home/me'),
   ];
   assert.deepEqual(roots.map(root => root.path), [
-    '/plugin/dsh-better-display/.dsh/skills',
-    '/plugin/dsh-better-display/.agents/skills',
+    '/plugin/dsh-interactive-reader/.dsh/skills',
+    '/plugin/dsh-interactive-reader/.agents/skills',
     '/home/me/.dsh/skills',
     '/home/me/.agents/skills',
   ]);
-  assert.equal(roots.some(root => root.path.endsWith('/dsh-better-display/skills')), false);
+  assert.equal(roots.some(root => root.path.endsWith('/dsh-interactive-reader/skills')), false);
 });
 
 test('a real user skill root with the pack is installed; the plugin pack path is not', async () => {
@@ -55,19 +55,19 @@ test('a real user skill root with the pack is installed; the plugin pack path is
   const missing = await scanGenerativeMcpappsStatus({
     home: emptyHome,
     env: {},
-    packPath: '/plugin/dsh-better-display/skills/generative-mcpapps',
+    packPath: '/plugin/dsh-interactive-reader/skills/generative-mcpapps',
   });
   const found = await scanGenerativeMcpappsStatus({
     home: skillHome,
     env: { DSH_HOME: join(skillHome, '.dsh') },
-    packPath: '/plugin/dsh-better-display/skills/generative-mcpapps',
+    packPath: '/plugin/dsh-interactive-reader/skills/generative-mcpapps',
   });
 
-  assert.equal(await rootHasGenerativeMcpapps('/plugin/dsh-better-display/skills'), false);
+  assert.equal(await rootHasGenerativeMcpapps('/plugin/dsh-interactive-reader/skills'), false);
   assert.equal(missing.installed, false);
   assert.equal(found.installed, true);
   assert.equal(found.via, 'skill-root');
-  assert.equal(found.packPath, '/plugin/dsh-better-display/skills/generative-mcpapps');
+  assert.equal(found.packPath, '/plugin/dsh-interactive-reader/skills/generative-mcpapps');
 });
 
 test('client detect snapshot never carries host packPath or home roots', async () => {

@@ -37,8 +37,8 @@ function createSkillProbe(ctx: Context): SkillStatusProbe {
       const id = firstSessionId(snap);
       const cwd = id === undefined ? undefined : snap.byId[id]?.cwd;
       const url = cwd
-        ? `/better-display/skill-status?cwd=${encodeURIComponent(cwd)}`
-        : '/better-display/skill-status';
+        ? `/interactive-reader/skill-status?cwd=${encodeURIComponent(cwd)}`
+        : '/interactive-reader/skill-status';
       const res = await fetch(url);
       if (!res.ok) return undefined;
       return await res.json() as HostSkillStatus;
@@ -58,7 +58,7 @@ function createSkillProbe(ctx: Context): SkillStatusProbe {
 export function installBetterDisplaySettings(ctx: Context, prefs: OpenPrefs): void {
   const locale = (ctx.get?.('locale') ?? (ctx as unknown as { locale?: LocaleFace }).locale) as LocaleFace | undefined;
   if (locale?.register) {
-    ctx.effect(() => locale.register!('better-display', { zh, en }), 'dsh-better-display: settings copy');
+    ctx.effect(() => locale.register!('interactive-reader', { zh, en }), 'dsh-interactive-reader: settings copy');
   }
   const checkSkill = createSkillProbe(ctx);
   const injected = (): BetterDisplaySettingsInjected => ({
@@ -69,10 +69,10 @@ export function installBetterDisplaySettings(ctx: Context, prefs: OpenPrefs): vo
   });
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
-    id: 'better-display',
+    id: 'interactive-reader',
     order: 40,
-    label: () => locale?.bind?.('better-display')?.('nav') || settingsCopyFor(languageTag(ctx)).nav,
-    locale: locale?.bind ? 'better-display' : undefined,
+    label: () => locale?.bind?.('interactive-reader')?.('nav') || settingsCopyFor(languageTag(ctx)).nav,
+    locale: locale?.bind ? 'interactive-reader' : undefined,
     inject: injected,
   }, SettingsSection));
 }

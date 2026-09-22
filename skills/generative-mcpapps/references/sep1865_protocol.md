@@ -1,12 +1,12 @@
-# Better Display host messages
+# Interactive Reader host messages
 
-This documents the adapter in `src/client/McpAppFrame.tsx`, not the full SEP-1865 specification. Use these messages for Better Display's `mcp-app` iframe. Other hosts require their own documented transport and capabilities.
+This documents the adapter in `src/client/McpAppFrame.tsx`, not the full SEP-1865 specification. Use these messages for Interactive Reader's `mcp-app` iframe. Other hosts require their own documented transport and capabilities.
 
 ## Initialization and theme
 
-The iframe can send `ui/initialize` with a JSON-RPC request ID. Better Display responds with `result.protocolVersion` and `result.hostContext`, including `theme`, `locale`, and `styles.variables`.
+The iframe can send `ui/initialize` with a JSON-RPC request ID. Interactive Reader responds with `result.protocolVersion` and `result.hostContext`, including `theme`, `locale`, and `styles.variables`.
 
-For compatibility, Better Display also sends an initial `ui/initialize` notification with those theme fields in `params`. Later theme changes arrive as `ui/notifications/host-context-changed`. The plugin injects a theme and height helper into HTML documents.
+For compatibility, Interactive Reader also sends an initial `ui/initialize` notification with those theme fields in `params`. Later theme changes arrive as `ui/notifications/host-context-changed`. The plugin injects a theme and height helper into HTML documents.
 
 When handling parent messages, verify the source:
 

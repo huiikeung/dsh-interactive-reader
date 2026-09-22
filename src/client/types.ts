@@ -17,7 +17,7 @@ export interface ReaderBlockOwner {
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     /** Trusted installed renderers may opt in; unknown model payloads never execute code. */
-    'dsh-better-display.block': { kind: 'chain'; scope: 'session'; owner: ReaderBlockOwner };
+    'dsh-interactive-reader.block': { kind: 'chain'; scope: 'session'; owner: ReaderBlockOwner };
   }
 }
 
@@ -30,9 +30,9 @@ export interface ReaderInjected {
    * composer accepted the text.
    */
   fillComposer: (text: string) => boolean;
-  /** Open a workspace file or directory; mode comes from the Better Display setting. */
+  /** Open a workspace file or directory; mode comes from the Interactive Reader setting. */
   openFile: (path: string) => Promise<void> | void;
-  /** Root-scoped Better Display prefs (`dsh.reader.v1`), shared with Settings. */
+  /** Root-scoped Interactive Reader prefs (`dsh.reader.v1`), shared with Settings. */
   openPrefs?: {
     getSnapshot: () => {
       deliverableOpenMode?: import('./open-file.js').DeliverableOpenMode;
@@ -71,7 +71,7 @@ export interface ReaderInjected {
 }
 export type ReaderProps = PropsRuntime<'conversation.view'>
   & PropsLocale<'chat'>
-  & PropsRenderSlots<'dsh-better-display.block'>
+  & PropsRenderSlots<'dsh-interactive-reader.block'>
   & PropsStore<ReturnType<typeof createReaderStore>>
   & ReaderInjected;
 export type BlockRenderProps = Pick<ReaderProps, 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView'> & {

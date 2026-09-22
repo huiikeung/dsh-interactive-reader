@@ -1,1 +1,1 @@
-{"version":3,"file":"settings-slots.d.ts","sourceRoot":"","sources":["../../../src/client/settings-slots.ts"],"names":[],"mappings":"AAUA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,oBAAoB,CAAC;AAE1D,OAAO,QAAQ,kCAAkC,CAAC;IAChD,UAAU,kBAAkB;QAC1B,gBAAgB,EAAE,eAAe,CAAC;KACnC;CACF"}
+{"version":3,"file":"settings-slots.d.ts","sourceRoot":"","sources":["../../../src/client/settings-slots.ts"],"names":[],"mappings":"AAUA,OAAO,KAAK,EAAE,eAAe,EAAE,MAAM,oBAAoB,CAAC;AAE1D,OAAO,QAAQ,kCAAkC,CAAC;IAChD,UAAU,kBAAkB;QAC1B,oBAAoB,EAAE,eAAe,CAAC;KACvC;CACF"}

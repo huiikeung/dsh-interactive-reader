@@ -1,23 +1,23 @@
-# dsh-better-display
+# dsh-interactive-reader
 
 [English](./README.en.md)
 
 推荐用 npm（可钉版本）：
 
 ```sh
-dsh plugin --profile web add dsh-better-display@0.6.2
+dsh plugin --profile web add dsh-interactive-reader@0.6.2
 ```
 
 也可以装 latest：
 
 ```sh
-dsh plugin --profile web add dsh-better-display
+dsh plugin --profile web add dsh-interactive-reader
 ```
 
 备选：从 GitHub 直装（跟默认分支最新提交）：
 
 ```sh
-dsh plugin --profile web add github:aa2246740/dsh-better-display
+dsh plugin --profile web add github:huiikeung/dsh-interactive-reader
 ```
 
 PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**。`dsh plugin add` 会在 `$DSH_HOME/profiles/web` 里跑 pnpm。仓库已提交编译好的 `lib/`，git / npm 安装都不用 `prepare`，也不用改 profile 的 `allowBuilds`。
@@ -28,25 +28,25 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 执行中过程会**实时折叠**成一行摘要并带计数，轮次结束后摘要仍可展开回看；正在等待你回答或确认时，状态行显示自最近一次输入起的等待计时；用户消息与轮次结束都有本地时间和耗时。
 
-工具过程里改过文件的调用会带上 `+A -R` 统计，点开是每个文件一个页签的差异面板；注册在宿主 `tool.call.toolview` 槽位里的第三方工具卡片也会直接渲染在阅读页。设置里的 **Better Display** 还有半透明毛玻璃与三档自动折叠强度。
+工具过程里改过文件的调用会带上 `+A -R` 统计，点开是每个文件一个页签的差异面板；注册在宿主 `tool.call.toolview` 槽位里的第三方工具卡片也会直接渲染在阅读页。设置里的 **交互阅读** 还有半透明毛玻璃与三档自动折叠强度。
 
 产物芯片上的「在文件夹中显示」按**宿主自己的回答**走：macOS / Windows 用访达 / 资源管理器定位，有桌面的 Linux 打开所在目录；没有桌面的宿主（比如 NAS）会在右侧栏打开一个目录面板；在设置里填上 fnOS 文件管理器地址模板后直接跳到 NAS 文件管理器；以上都不可用时复制目录的绝对路径并如实说明，不会再假装成功。
 
-最终回答里的 ````mcp-app` 代码块会在阅读视图里挂成交互卡片，跑在 `<iframe sandbox="allow-scripts allow-forms">` 里，没有 `allow-same-origin`。卡片可以通过 JSON-RPC 把下一轮 prompt 填进输入框。技能包在 [`skills/generative-mcpapps/`](skills/generative-mcpapps/)。设置里的 **Better Display** 可把产物改为右侧栏预览（默认仍用系统应用），打开半透明毛玻璃（默认关），设置过程自动折叠开关（默认开），并检测该技能是否已装进宿主技能目录。
+最终回答里的 ````mcp-app` 代码块会在阅读视图里挂成交互卡片，跑在 `<iframe sandbox="allow-scripts allow-forms">` 里，没有 `allow-same-origin`。卡片可以通过 JSON-RPC 把下一轮 prompt 填进输入框。技能包在 [`skills/generative-mcpapps/`](skills/generative-mcpapps/)。设置里的 **交互阅读** 可把产物改为右侧栏预览（默认仍用系统应用），打开半透明毛玻璃（默认关），设置过程自动折叠开关（默认开），并检测该技能是否已装进宿主技能目录。
 
 面向 DeepSeek Harness **0.1.6-alpha.2**。只改展示，不改 Agent 执行、SDK 或模型凭据。Node.js `^22.19.0 || >=24`。新会话默认进阅读。
 
 本地目录或 tarball：
 
 ```sh
-dsh plugin --profile web add ./dsh-better-display
-dsh plugin --profile web add ./dsh-better-display-0.6.2.tgz
+dsh plugin --profile web add ./dsh-interactive-reader
+dsh plugin --profile web add ./dsh-interactive-reader-0.6.2.tgz
 ```
 
 `dsh.bundle` 是开机捕获的。不要再往 profile 的 `cordis.patch.yml` 手写同一条 insert，会重复挂载。
 
 ```sh
-dsh plugin --profile web remove dsh-better-display
+dsh plugin --profile web remove dsh-interactive-reader
 ```
 
 ## 开发
@@ -59,7 +59,7 @@ npm run build
 
 `npm run build` 分两步：`tsc` 产出 `lib/types/`（类型与 Host 半边的 ESM），
 [`scripts/tsdown.standalone.config.mjs`](scripts/tsdown.standalone.config.mjs) 产出
-`lib/dsh-better-display.js`（Host 半边）和 `lib/client.js`（浏览器半边）。
+`lib/dsh-interactive-reader.js`（Host 半边）和 `lib/client.js`（浏览器半边）。
 
 这个独立构建不依赖 Harness 源码检出，也不依赖 `lightningcss`。它复刻官方
 `client-build.mjs` 的约定：浏览器半边是 `window.__ModuleLoader__.load({ id, factory })`
@@ -76,7 +76,7 @@ DSH 给设置分区画图标用的是一段硬编码的 `navIcon(id)`（在核�
 （`SettingsSectionOwnerProps` 只有 `close`），所以插件无法自备图标。
 
 本插件的做法是**运行时钉**：`src/client/index.tsx` 的 `pinNavGlyph()` 在自己的 bundle
-里，按标签文本（「交互阅读」/「Better Display」）找到设置导航里属于本分区的那一格，
+里，按标签文本（「交互阅读」/「Interactive Reader」）找到设置导航里属于本分区的那一格，
 **就地重写它的 `<svg>` 几何**，钉成 `IconBrowseOutline16`（一页文档加几条文本线），并用
 `MutationObserver` 在壳重绘导航时重新贴回去。
 
@@ -84,7 +84,7 @@ DSH 给设置分区画图标用的是一段硬编码的 `navIcon(id)`（在核�
 
 - 不受 DSH 运行时升级影响（node_modules 被替换也无所谓）；
 - 不会和其他插件争抢同一个核心文件——本机实测多个插件补同一个 `navIcon` 时会互相抹掉；
-- 图标标记 `data-better-display-nav-icon` 保证不会重复贴；
+- 图标标记 `data-interactive-reader-nav-icon` 保证不会重复贴；
 - `glyph()` 在任何 DOM 改动之前就跑完，所以就算它抛错，壳自己的齿轮也还在，导航格不会空白。
 
 ### 在 Harness 检出里开发（可选）

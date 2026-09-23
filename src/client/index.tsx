@@ -9,6 +9,7 @@ import { Reader } from './Reader.js';
 import { navGlyph, pinNavGlyph } from './nav-glyph.js';
 import { createReaderStore } from './store.js';
 import { installReaderEntry } from './entry.js';
+import { installOfficialActions } from './official-actions.js';
 import { installBetterDisplaySettings } from './settings.js';
 import { fillComposerDom } from './mcp-app.js';
 import { fileAddressFor, isFolderOpenPath, modeFromSnapshot, openDeliverableFile } from './open-file.js';
@@ -163,6 +164,8 @@ export function apply(ctx: Context): void {
   // intensity, and open-mode on the unsuffixed `dsh.reader.v1` key.
   const prefs = store.create();
   installBetterDisplaySettings(ctx, prefs);
+  // Lend the official actions strip its own seat so the reading tab can render it.
+  installOfficialActions(ctx);
   // The right-sidebar folder pane gives「在文件夹中显示」a target on a Host with no
   // desktop; it is skipped when the shell exposes no tab registry.
   installFolderPane(ctx);
@@ -173,7 +176,12 @@ export function apply(ctx: Context): void {
     order: -5,
     label: () => '阅读',
     locale: 'chat',
-    children: { 'dsh-interactive-reader.block': { kind: 'chain', scope: 'session' } },
+    children: {
+      'dsh-interactive-reader.block': { kind: 'chain', scope: 'session' },
+      // Seat for the official actions strip the reader renders; the bridge in
+      // official-actions.ts fills it with the host slot's contributions.
+      'dsh-interactive-reader.official.actions': { kind: 'list', scope: 'session' },
+    },
     store,
     inject: (sessionId: SessionId): ReaderInjected => {
       const session = () => {

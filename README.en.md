@@ -2,10 +2,19 @@
 
 [中文](./README.md)
 
+Adds a **reading** tab to DeepSeek Harness. The closing answer row carries the
+**official answer actions** alongside this fork's own copy / fork / timing / usage
+controls: thumbs-up and thumbs-down feedback that opens the official feedback form,
+plus「view this turn in the context view」and「save to memory」where those plugins
+contribute them — the same strip the native chat tab shows, because it renders from
+the host's own `conversation.chat.assistant-actions` slot. A slot may be declared
+only once, so [`official-actions.ts`](src/client/official-actions.ts) lends those
+contributions a Reader-owned seat; no official component is reimplemented.
+
 Prefer npm (version-pinable):
 
 ```sh
-dsh plugin --profile web add dsh-interactive-reader@0.6.2
+dsh plugin --profile web add dsh-interactive-reader@0.8.0
 ```
 
 Or latest:

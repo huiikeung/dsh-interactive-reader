@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.8.0
+
+The reading tab now shows the official answer actions, starting with feedback.
+
+Upstream v0.3.0 bridged its reader to the host's official components. This is the
+first step of that bridge, and the smallest visible piece: the reading tab now
+renders `conversation.chat.assistant-actions`, the host-declared slot the native
+chat tab has always used.
+
+### What you get
+
+Thumbs-up / thumbs-down on the closing answer, and clicking either opens the
+official feedback form — 任务结果、指令理解与遵循、产品功能与交互、稳定性和速度、
+资源使用与费用、安全隐私与权限、其他 — with the same submit path the chat tab uses.
+The same strip also carries「在上下文视图中查看此轮」and「存入记忆」where those
+plugins contribute them, and anything registered there in future appears here too.
+Our own copy, fork, delay and usage controls stay ours and sit in the same row.
+
+### Why a seat mirror is unavoidable
+
+A component may render only the slots its own registration declares in `children`,
+`renderSlot` throws `SlotOwnershipError` otherwise, and a slot may be declared
+exactly once — the host already declares this one, so re-declaring it throws
+`slot "..." is already declared`. The platform therefore gives a plugin no way to
+render another owner's slot, and `official-actions.ts` lends the official
+contributions a Reader-owned seat instead: registration metadata (id, order, locale,
+inject) and the component object travel intact, the platform re-runs each entry's
+`inject(sessionId)` against the session being read, and no official renderer is
+reimplemented. Contributions that declare child slots are skipped — mirroring those
+needs the recursive namespacing the full bridge uses, and skipping is exactly where
+they stood before.
+
+### Verified
+
+196 tests pass; typecheck and build clean. In the running GUI the reading tab renders
+the official strip (four turned rows, 16 official controls), clicking a thumb opens
+the official feedback dialog with its full category list, our own six answer controls
+still render, and no console error is thrown.
+
+This is step one of the bridge, not the whole thing: tool details, file cards, file
+line numbers and local Markdown images are still this fork's own implementations, and
+upstream v0.3.0 removes `getToolView` to do them, which this fork builds on.
+
 ## 0.7.1
 
 Ports three fixes from upstream `aa2246740/dsh-better-display` v0.3.0. Each was a real

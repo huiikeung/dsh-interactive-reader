@@ -162,7 +162,7 @@ function MessageClock({ time }: { time: number }) {
   return <time className={css.messageClock} dateTime={new Date(time).toISOString()}>{formatMessageClock(time)}</time>;
 }
 
-export function CopyAnswer({ blocks, onFork, metrics }: { blocks: readonly AssistantBlock[]; onFork?: () => void; metrics?: BlockRenderProps['metrics'] }) {
+export function CopyAnswer({ blocks, onFork, metrics, extraActions }: { blocks: readonly AssistantBlock[]; onFork?: () => void; metrics?: BlockRenderProps['metrics']; extraActions?: ReactNode }) {
   const { receipt, copy } = useCopyReceipt();
   const text = blocks.filter((block): block is Extract<AssistantBlock, { kind: 'text' }> => block.kind === 'text').map(block => block.text).join('\n\n');
   const endedAt = metrics?.endedAt;
@@ -192,6 +192,9 @@ export function CopyAnswer({ blocks, onFork, metrics }: { blocks: readonly Assis
     )}
     {metrics && <TurnMetrics usage={metrics.usage} runMs={metrics.runMs} tokensPerSecond={metrics.tokensPerSecond} ttftMs={metrics.ttftMs} />}
     {endedAt !== undefined && <MessageClock time={endedAt} />}
+    {/* Contributions from the official `conversation.chat.assistant-actions` list
+        slot — feedback first, anything else registered there later after it. */}
+    {extraActions}
     <span role="status" className={css.meta}>{receipt}</span>
   </div>;
 }

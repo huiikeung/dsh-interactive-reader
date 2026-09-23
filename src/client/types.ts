@@ -8,6 +8,22 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type {} from '@deepseek-ai/dsh-client-ui-session/client';
 import type { createReaderStore } from './store.js';
 
+/**
+ * Reader-owned seat for the official finalized-assistant actions.
+ *
+ * A component may render only the slots its own registration declares in `children`,
+ * and a slot may be declared exactly once — `conversation.chat.assistant-actions` is
+ * already declared by the host, so this fork cannot render or re-declare it directly.
+ * The bridge in `official-actions.ts` lends that slot's contributions this seat
+ * instead; it carries the official entry's own spec, so the mirrored entries resolve
+ * exactly as they do in the native chat tab.
+ */
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface SlotMap {
+    'dsh-interactive-reader.official.actions': SlotMap['conversation.chat.assistant-actions'];
+  }
+}
+
 export interface ReaderBlockOwner {
   block: AssistantBlock;
   streaming: boolean;
@@ -71,10 +87,10 @@ export interface ReaderInjected {
 }
 export type ReaderProps = PropsRuntime<'conversation.view'>
   & PropsLocale<'chat'>
-  & PropsRenderSlots<'dsh-interactive-reader.block'>
+  & PropsRenderSlots<'dsh-interactive-reader.block' | 'dsh-interactive-reader.official.actions'>
   & PropsStore<ReturnType<typeof createReaderStore>>
   & ReaderInjected;
-export type BlockRenderProps = Pick<ReaderProps, 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView'> & {
+export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView'> & {
   openFile?: (path: string) => Promise<void> | void;
   revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
   /** The Host's own view of what it can open natively; shared, memoized probe. */

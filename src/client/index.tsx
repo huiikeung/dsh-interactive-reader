@@ -9,7 +9,7 @@ import { Reader } from './Reader.js';
 import { navGlyph, pinNavGlyph } from './nav-glyph.js';
 import { createReaderStore } from './store.js';
 import { installReaderEntry } from './entry.js';
-import { installOfficialActions } from './official-actions.js';
+import { installOfficialSlots, officialChildren, type CompositionRegistry } from './official-slots.js';
 import { installBetterDisplaySettings } from './settings.js';
 import { fillComposerDom } from './mcp-app.js';
 import { fileAddressFor, isFolderOpenPath, modeFromSnapshot, openDeliverableFile } from './open-file.js';
@@ -164,8 +164,6 @@ export function apply(ctx: Context): void {
   // intensity, and open-mode on the unsuffixed `dsh.reader.v1` key.
   const prefs = store.create();
   installBetterDisplaySettings(ctx, prefs);
-  // Lend the official actions strip its own seat so the reading tab can render it.
-  installOfficialActions(ctx);
   // The right-sidebar folder pane gives「在文件夹中显示」a target on a Host with no
   // desktop; it is skipped when the shell exposes no tab registry.
   installFolderPane(ctx);
@@ -178,9 +176,9 @@ export function apply(ctx: Context): void {
     locale: 'chat',
     children: {
       'dsh-interactive-reader.block': { kind: 'chain', scope: 'session' },
-      // Seat for the official actions strip the reader renders; the bridge in
-      // official-actions.ts fills it with the host slot's contributions.
-      'dsh-interactive-reader.official.actions': { kind: 'list', scope: 'session' },
+      // Seats for the official strips this reader renders; official-slots.ts fills
+      // them with the host slots' contributions.
+      ...officialChildren(ctx.slots as unknown as CompositionRegistry),
     },
     store,
     inject: (sessionId: SessionId): ReaderInjected => {
@@ -338,9 +336,23 @@ export function apply(ctx: Context): void {
             return null;
           }
         },
+        // The Host's own prose file-mention resolver, consumed exactly as the official
+        // chat consumes it. Optional service: absent wherever no provider is installed,
+        // which is why the reading tab also keeps its own produced-path matcher.
+        officialFileMentions: owner => {
+          try {
+            return ctx.get('chatFileMentions')?.forClosing(owner, sessionId);
+          } catch {
+            return undefined;
+          }
+        },
       };
     },
     }, Reader);
+    // Only now are our own seats declared by the registration above, so the mirrors
+    // can register into them. Running this earlier fails with "a parent entry's
+    // children table must declare it".
+    yield installOfficialSlots(ctx);
     yield installReaderEntry(ctx);
   });
 }

@@ -48,3 +48,46 @@ test('a path with characters needing escaping is encoded', () => {
     'http://127.0.0.1:2298/api/file?path=%2Fvol1%2F%E5%B7%A5%E4%BD%9C%E5%8F%B0%2F%E5%9B%BE%20%E7%89%87.png',
   );
 });
+
+/**
+ * Prose file mentions.
+ *
+ * The reading tab composes the Host's own `chatFileMentions` resolver with its own
+ * produced-path matcher: the official one wins, ours covers what it declines, and
+ * either alone is used when the other is absent. This is a pure-function test of that
+ * composition — the live Host side was verified separately (the shipping
+ * `dsh-client-ui-deliverables` provides the service, and the official chat consumes it
+ * through the same `forClosing(owner, sessionId)` call).
+ */
+import { composeFileMentions } from '../src/client/deliverables.ts';
+import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives';
+
+function resolver(known: readonly string[], labelPrefix: string): MarkdownFileMentions {
+  return {
+    resolve(value: string) {
+      const path = known.includes(value) ? value : undefined;
+      return path === undefined ? undefined
+        : { open: () => {}, label: `${labelPrefix} ${path}`, title: path };
+    },
+  };
+}
+
+test('the official resolver wins where it answers, ours covers the rest', () => {
+  const official = resolver(['src/client/Reader.tsx', 'package.json'], '官方');
+  const produced = resolver(['lib/client.js'], '产物');
+  const composed = composeFileMentions(official, produced);
+
+  assert.equal(composed?.resolve('package.json')?.label, '官方 package.json');
+  assert.equal(composed?.resolve('src/client/Reader.tsx')?.label, '官方 src/client/Reader.tsx');
+  // Ours answers only where the official one declines.
+  assert.equal(composed?.resolve('lib/client.js')?.label, '产物 lib/client.js');
+  assert.equal(composed?.resolve('does/not/exist'), undefined);
+});
+
+test('whichever resolver exists is used alone', () => {
+  assert.equal(composeFileMentions(undefined, undefined), undefined);
+  const produced = resolver(['a.ts'], '产物');
+  assert.equal(composeFileMentions(undefined, produced), produced, 'no provider: ours alone');
+  const official = resolver(['b.ts'], '官方');
+  assert.equal(composeFileMentions(official, undefined), official, 'nothing produced: official alone');
+});

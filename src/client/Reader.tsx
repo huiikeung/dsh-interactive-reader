@@ -11,7 +11,7 @@ import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
 import { assistantSegments, boundaryOf, forkAnchorSeq, runningIndicator, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
-import { basename, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
+import { basename, composeFileMentions, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
 import { fileManagerName, revealPlanFor, type RevealDesktop, type RevealOutcome } from './reveal.js';
 import { copyToClipboard } from './clipboard.js';
@@ -597,7 +597,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
   const expanded = !autoFold || holdingSelection || processExpanded(expansionChoice, boundary);
   const [foldOpenByKey, setFoldOpenByKey] = useState<Record<string, boolean>>({});
   const deliverables = useMemo(() => getTurnDeliverables(turn, flow), [turn, flow]);
-  const fileMentions = useMemo(
+  const producedMentions = useMemo(
     () => deliverables.length > 0 && props.openFile ? createProducedFileMentions(deliverables, props.openFile) : undefined,
     [deliverables, props.openFile],
   );
@@ -608,6 +608,18 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     }
     return undefined;
   }, [group.keys, nodes]);
+  // The Host's own resolver first, ours where it declines: the official one knows the
+  // whole workspace vocabulary, ours covers exactly the paths this turn produced. A
+  // turn with no TurnLocation yet (a turn still assembling) asks for neither.
+  const officialMentions = turn === undefined ? undefined : props.officialFileMentions?.({
+    turn,
+    seq: tailData?.closing?.finalNode?.seq ?? tailData?.seq ?? 0,
+    openFile: path => { void props.openFile?.(path); },
+  });
+  const fileMentions = useMemo(
+    () => composeFileMentions(officialMentions, producedMentions),
+    [officialMentions, producedMentions],
+  );
   const runMs = turn?.start && turn?.end ? Math.max(0, turn.end.time - turn.start.time) : undefined;
   const metrics = useMemo(() => ({
     usage: tailData?.tokenUsage,
@@ -909,7 +921,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.8.1" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.9.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

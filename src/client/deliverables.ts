@@ -123,3 +123,27 @@ export function createProducedFileMentions(
     },
   };
 }
+
+/**
+ * Prefer the Host's official prose file-mention resolver, falling back to the
+ * produced-path matcher only where the official one declines.
+ *
+ * Both answer the same question — "is this inline-code token a workspace file, and
+ * what does opening it do" — so they compose: the official resolver knows the full
+ * workspace vocabulary (paths the turn never produced, basenames, workspace-relative
+ * spellings), while ours covers exactly the paths this turn produced. Composing keeps
+ * the reading tab working on a Host with no `chatFileMentions` provider, and adds the
+ * official vocabulary rather than replacing what already answered.
+ */
+export function composeFileMentions(
+  official: MarkdownFileMentions | undefined,
+  produced: MarkdownFileMentions | undefined,
+): MarkdownFileMentions | undefined {
+  if (official === undefined) return produced;
+  if (produced === undefined) return official;
+  return {
+    resolve(value: string) {
+      return official.resolve(value) ?? produced.resolve(value);
+    },
+  };
+}

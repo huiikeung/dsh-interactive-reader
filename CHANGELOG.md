@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.9.0
+
+Two more pieces of the official-component bridge: prose file mentions, and the
+general composition adapter they and everything else will build on.
+
+### Prose file mentions come from the Host
+
+Inline code that names a workspace file used to open it only when this fork's own
+produced-path matcher recognised it. The Host ships a `chatFileMentions` service for
+exactly this — `dsh-client-ui-deliverables` provides it and the official chat consumes
+it through `forClosing(owner, sessionId)`. The reading tab now asks for it the same
+way, and composes: the official resolver wins, this fork's produced-path matcher answers
+where it declines, and either alone is used when the other is absent. On a Host with no
+provider nothing changes.
+
+### The bridge is now one adapter
+
+`official-slots.ts` mirrors a host-declared slot's contributions into a Reader-owned
+seat: registration metadata (id, order, locale, inject) and the component object travel
+intact, the platform re-runs each entry's `inject(sessionId)` against the session being
+read, and no official renderer is reimplemented. Child slots are mirrored recursively
+under namespaced seats, which is what lets a contribution that declares children keep
+rendering them — a second declarer of the same sub-slot key is a load-time throw.
+
+Two ordering constraints were found the hard way and are now load-bearing:
+the mirrors must run *after* our `conversation.view` registration declares the seats
+(running earlier throws "a parent entry's children table must declare it"), and a
+family that fails must not take the reading tab down, so each is isolated and named.
+
+### Not in this release
+
+Tool details, produced-file cards and unknown node kinds are still this fork's own
+renderers. Each needs a live session holding the relevant data to be verified against,
+and replacing a verified renderer on speculation is not worth the risk — the seats for
+them are one line away in this module once that data exists.
+
+201 tests pass; typecheck and build clean. Verified in the running GUI: the plugin
+activates with no console error, the official actions strip still renders (four turned
+rows, 16 official controls) alongside this fork's own answer row, and the reading tab
+matches the native chat tab's output on the same session content.
+
 ## 0.8.1
 
 Markdown images with a local path now render instead of degrading to alt text.

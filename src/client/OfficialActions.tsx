@@ -1,4 +1,5 @@
 import type { AssistantActionOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
+import { OFFICIAL_SEATS } from './official-slots.js';
 import type { ReaderProps } from './types.js';
 
 /** Durable identity of the closing assistant message; see the chat slot contract. */
@@ -25,6 +26,6 @@ type MessageId = AssistantActionOwnerProps['messageId'];
 export function OfficialActions({ renderSlot, messageId }: Pick<ReaderProps, 'renderSlot'> & { messageId?: MessageId }) {
   if (messageId === undefined) return null;
   return <span data-reader-official-actions style={{ display: 'contents' }}>
-    {renderSlot('dsh-interactive-reader.official.actions', { messageId })}
+    {renderSlot(OFFICIAL_SEATS.actions, { messageId })}
   </span>;
 }

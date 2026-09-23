@@ -21,4 +21,16 @@ export declare function getTurnDeliverables(turn: TurnLocation | undefined, flow
  * into clickable file references that open the corresponding file on the host.
  */
 export declare function createProducedFileMentions(paths: readonly string[], openFile: (path: string) => void): MarkdownFileMentions;
+/**
+ * Prefer the Host's official prose file-mention resolver, falling back to the
+ * produced-path matcher only where the official one declines.
+ *
+ * Both answer the same question — "is this inline-code token a workspace file, and
+ * what does opening it do" — so they compose: the official resolver knows the full
+ * workspace vocabulary (paths the turn never produced, basenames, workspace-relative
+ * spellings), while ours covers exactly the paths this turn produced. Composing keeps
+ * the reading tab working on a Host with no `chatFileMentions` provider, and adds the
+ * official vocabulary rather than replacing what already answered.
+ */
+export declare function composeFileMentions(official: MarkdownFileMentions | undefined, produced: MarkdownFileMentions | undefined): MarkdownFileMentions | undefined;
 //# sourceMappingURL=deliverables.d.ts.map

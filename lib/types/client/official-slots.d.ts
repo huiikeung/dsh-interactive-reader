@@ -28,11 +28,13 @@ import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client';
 declare const FAMILIES: {
     readonly actions: "conversation.chat.assistant-actions";
     readonly tools: "tool.call.toolview";
+    readonly tail: "conversation.chat.turnTail";
 };
 export type OfficialFamily = keyof typeof FAMILIES;
 export declare const OFFICIAL_SEATS: {
     readonly actions: "dsh-interactive-reader.official.actions/conversation.chat.assistant-actions";
     readonly tools: "dsh-interactive-reader.official.tools/tool.call.toolview";
+    readonly tail: "dsh-interactive-reader.official.tail/conversation.chat.turnTail";
 };
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -70,6 +72,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
             scope: 'session';
             owner: OfficialToolOwner;
         };
+        'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
     }
 }
 /** The documented, type-erased registry inspection/registration boundary. */
@@ -87,6 +90,17 @@ export interface CompositionRegistry {
 export declare function officialChildren(slots: Pick<CompositionRegistry, 'spec'>): {
     [K in OfficialSeat]: SlotSpec<SlotMap[K]>;
 };
+/**
+ * Keep the official produced-file cards from repeating paths this fork already shows.
+ *
+ * Reader's own chip row presents produced paths with its copy / reveal / open-mode
+ * actions, and the official tail independently renders official file cards for explicit
+ * `present` artifacts. Both read the same session data, so without this the same path
+ * appears twice in one turn. Only the presentation prop is filtered: the source match,
+ * the session data and the official component are untouched, and an unrecognized shape
+ * passes through intact for safe forward degradation.
+ */
+export declare function producedPathTailMatch(value: unknown, displayedPaths?: readonly string[]): unknown;
 /**
  * Mirror one slot's contribution set incrementally.
  *

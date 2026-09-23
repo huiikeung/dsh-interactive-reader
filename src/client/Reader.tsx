@@ -5,6 +5,7 @@ import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from '@deepseek
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
 import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageActions } from './Blocks.js';
 import { OfficialActions } from './OfficialActions.js';
+import { OfficialTail } from './OfficialTail.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
@@ -701,6 +702,12 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
       <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />
     </div>}
     {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} probeRevealDesktop={props.probeRevealDesktop} fnosFileManagerTemplate={props.fnosFileManagerTemplate} revealPaneAvailable={props.revealPaneAvailable?.()} openMode={openMode} />}
+    {/* The official tail: file cards for explicit `present` artifacts and the plan
+        review row. Paths our own chip row already shows are filtered out by the
+        mirror, so one turn never shows the same file twice. */}
+    {turn !== undefined && <OfficialTail renderSlot={props.renderSlot} turn={turn}
+      seq={tailData?.closing?.finalNode?.seq ?? tailData?.seq ?? 0} openFile={props.openFile}
+      producedPaths={deliverables} />}
     {showTerminalNotice && <div className={css.notice} data-reader-terminal>{terminal}</div>}
   </section>;
 });
@@ -921,7 +928,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.9.1" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.9.2" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

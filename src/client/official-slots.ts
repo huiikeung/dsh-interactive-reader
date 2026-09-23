@@ -32,11 +32,13 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
 const FAMILIES = {
   actions: 'conversation.chat.assistant-actions',
   tools: 'tool.call.toolview',
+  tail: 'conversation.chat.turnTail',
 } as const;
 export type OfficialFamily = keyof typeof FAMILIES;
 export const OFFICIAL_SEATS = {
   actions: 'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions',
   tools: 'dsh-interactive-reader.official.tools/tool.call.toolview',
+  tail: 'dsh-interactive-reader.official.tail/conversation.chat.turnTail',
 } as const;
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -73,6 +75,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions': SlotMap['conversation.chat.assistant-actions'];
     'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & { kind: 'keyed'; scope: 'session'; owner: OfficialToolOwner };
+    'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
   }
 }
 
@@ -86,6 +89,9 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
   actions: { kind: 'list', scope: 'session' },
   tools: { kind: 'keyed', scope: 'session' },
+  // 0.1.6-alpha.2 declares turnTail a list; RC2 declared it a chain, so the live spec
+  // is the only thing that can be trusted here.
+  tail: { kind: 'list', scope: 'session' },
 };
 
 /** The documented, type-erased registry inspection/registration boundary. */
@@ -132,6 +138,37 @@ function translatedComponent(entry: StoredEntry, names: ReadonlyMap<string, stri
 }
 
 /**
+ * Keep the official produced-file cards from repeating paths this fork already shows.
+ *
+ * Reader's own chip row presents produced paths with its copy / reveal / open-mode
+ * actions, and the official tail independently renders official file cards for explicit
+ * `present` artifacts. Both read the same session data, so without this the same path
+ * appears twice in one turn. Only the presentation prop is filtered: the source match,
+ * the session data and the official component are untouched, and an unrecognized shape
+ * passes through intact for safe forward degradation.
+ */
+export function producedPathTailMatch(value: unknown, displayedPaths?: readonly string[]): unknown {
+  if (!value || typeof value !== 'object') return value;
+  const match = value as Record<string, unknown>;
+  const displayed = new Set(displayedPaths ?? []);
+  return displayed.size > 0 && Array.isArray(match.produced) && Array.isArray(match.presented)
+    ? { ...match, produced: match.produced.filter(path => !displayed.has(path as string)) }
+    : value;
+}
+
+/** Wrap a tail contribution so its `matched` prop carries the filtered produced set. */
+function tailPresentation(component: unknown) {
+  const Original = component as ComponentType<Record<string, unknown>>;
+  return memo(function ReaderTailPresentation(props: Record<string, unknown>) {
+    const matched = useMemo(
+      () => producedPathTailMatch(props.matched, props.readerProducedPaths as readonly string[] | undefined),
+      [props.matched, props.readerProducedPaths],
+    );
+    return createElement(Original, { ...props, matched });
+  });
+}
+
+/**
  * Mirror one slot's contribution set incrementally.
  *
  * Unrelated additions do not remount existing entries or recreate their subscriptions;
@@ -165,11 +202,14 @@ export function mirrorOfficialSlot(
       const dispose = () => { for (const stop of disposers.splice(0).reverse()) stop(); };
       try {
         const { component: _component, options, children: _children, ...metadata } = entry;
+        const presentation = source === FAMILIES.tail && entry.locale === 'deliverables'
+          ? { ...entry, component: tailPresentation(entry.component) }
+          : entry;
         disposers.push(slots.register({
           ...options, ...metadata, name: target,
           ...(names.size ? { children } : {}),
           registrant: `dsh-interactive-reader → ${entry.registrant ?? source}`,
-        }, translatedComponent(entry, names)));
+        }, translatedComponent(presentation, names)));
         for (const [key, seat] of names) {
           disposers.push(mirrorOfficialSlot(slots, key, seat, namespace));
         }

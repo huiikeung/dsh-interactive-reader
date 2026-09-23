@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.9.2
+
+The official turn tail: produced-file cards and the plan review row.
+
+`conversation.chat.turnTail` is a host-declared session-scoped list slot. Two installed
+plugins contribute to it on a stock Host — the deliverables plugin's file cards for
+explicit `present` artifacts, and the plan plugin's review row — so rendering its mirror
+is the whole feature: the reading tab now shows what the native chat tab shows at the
+tail of a turn.
+
+This fork's own chip row still presents produced paths, with its copy / reveal /
+open-mode actions and the fnOS file-manager template. Because both read the same session
+data, the mirror filters the paths we already show out of the official cards' `produced`
+set (`producedPathTailMatch`) — only the presentation prop, never the source match, the
+session data or the official component, and an unrecognized shape passes through intact.
+
+Note the kind: 0.1.6-alpha.2 declares `turnTail` a **list**, while RC2 declared it a
+chain. The seat takes its spec from the live Host for exactly this reason; the recorded
+fallback is a comment, not an expectation.
+
+Verified on a session built for it: the official tail renders (24 child nodes — the file
+card, its description, 「在侧边栏预览」and「打开」), the `present` tool view renders
+through the same bridge, no block error and no console error. 208 tests pass.
+
 ## 0.9.1
 
 Tool details render through the official views — and that fixes a real crash.

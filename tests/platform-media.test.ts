@@ -91,3 +91,34 @@ test('whichever resolver exists is used alone', () => {
   const official = resolver(['b.ts'], '官方');
   assert.equal(composeFileMentions(official, undefined), official, 'nothing produced: official alone');
 });
+
+/**
+ * The official produced-file cards must not repeat a path this fork already shows.
+ *
+ * Reader's own chip row presents produced paths with its copy / reveal / open-mode
+ * actions, and the official tail independently renders official file cards for explicit
+ * `present` artifacts — both read the same session data. The mirror filters only the
+ * presentation prop, so the source match, the session data and the official component
+ * are untouched, and an unrecognized shape passes through intact.
+ */
+import { producedPathTailMatch } from '../src/client/official-slots.ts';
+
+test('paths our own row already shows are dropped from the official cards', () => {
+  const matched = { produced: ['/a/b.ts', '/c/d.ts'], presented: ['/a/b.ts'] };
+  const filtered = producedPathTailMatch(matched, ['/a/b.ts']) as typeof matched;
+  assert.deepEqual(filtered.produced, ['/c/d.ts'], 'the shown path is filtered out');
+  // `presented` is the explicit `present` set and is never filtered.
+  assert.deepEqual(filtered.presented, ['/a/b.ts']);
+  // The input object is not mutated.
+  assert.deepEqual(matched.produced, ['/a/b.ts', '/c/d.ts']);
+});
+
+test('an unrecognized shape, or nothing shown yet, passes through intact', () => {
+  const odd = { files: ['x'] } as unknown;
+  assert.equal(producedPathTailMatch(odd, ['/a']), odd, 'unknown shape untouched');
+  const matched = { produced: ['/a/b.ts'], presented: [] };
+  assert.equal(producedPathTailMatch(matched, []), matched, 'nothing shown yet: untouched');
+  assert.equal(producedPathTailMatch(matched, undefined), matched, 'no produced paths: untouched');
+  assert.equal(producedPathTailMatch(null, ['/a']), null);
+  assert.equal(producedPathTailMatch('/a/b.ts', ['/a']), '/a/b.ts');
+});

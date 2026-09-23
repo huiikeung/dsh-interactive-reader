@@ -101,7 +101,7 @@ export interface ReaderInjected {
     officialImageLoader?: MessageImageLoader;
 }
 export type ReaderProps = PropsRuntime<'conversation.view'> & PropsLocale<'chat'> & PropsRenderSlots<'dsh-interactive-reader.block' | OfficialSeat> & PropsStore<ReturnType<typeof createReaderStore>> & ReaderInjected;
-export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader'> & {
+export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader' | 'officialFileMentions'> & {
     openFile?: (path: string) => Promise<void> | void;
     revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
     /** The Host's own view of what it can open natively; shared, memoized probe. */

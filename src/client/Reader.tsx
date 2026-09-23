@@ -6,6 +6,7 @@ import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
 import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageActions } from './Blocks.js';
 import { OfficialActions } from './OfficialActions.js';
 import { OfficialTail } from './OfficialTail.js';
+import { OfficialNode } from './OfficialNode.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
@@ -249,10 +250,19 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   // host (it appears nowhere in the installed packages), so a slash command arrives
   // as 'command' above and is rendered there. Keeping the branch only made the file
   // look like it handled a case that cannot occur.
-  return <div className={css.unknown} data-reader-anchor>
-    <p>此记录类型暂未接入阅读页：{node.kind}</p>
-    <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
-  </div>;
+  //
+  // Everything that reaches here is a kind no renderer claims — on a stock Host that is
+  // only `unknown`, the forward-compatibility path. The official renderer presents it
+  // the way the native chat tab does; this fork's own record block stays as the fallback
+  // for a kind nothing claims at all.
+  return <OfficialNode renderSlot={render.renderSlot} node={node}
+    cwd={undefined}
+    openFile={render.openFile} inspectCall={undefined} forkAt={render.forkAt}
+    loadImage={render.officialImageLoader} officialFileMentions={render.officialFileMentions}
+    fallback={<div className={css.unknown} data-reader-anchor>
+      <p>此记录类型暂未接入阅读页：{node.kind}</p>
+      <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
+    </div>} />;
 });
 
 /**
@@ -928,7 +938,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.9.2" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="1.0.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.0.0
+
+The official-component bridge is complete: four families, each verified on a session
+built for it.
+
+| Family | What it brings |
+| --- | --- |
+| `conversation.chat.assistant-actions` | thumbs-up / thumbs-down feedback and its official dialog, plus anything else registered there |
+| `tool.call.toolview` | official tool views with their injected state, locale and recursive sub-views |
+| `conversation.chat.turnTail` | produced-file cards for explicit `present` artifacts, and the plan review row |
+| `conversation.chat.node` | a node kind this reader does not present itself, rendered natively |
+
+All four are mirrored into Reader-owned seats and rendered through the platform, so the
+reading tab shows what the native chat tab shows. 0.9.1 in this series was a crash fix:
+hand-rendering a tool view passed four props where a view's own `PropsRuntime` was
+needed, so every bash / read / write / present / skill call died with
+`useSessions is not a function`.
+
+### The node family, honestly
+
+On a stock Host the reader already presents every registered node kind, so the only one
+left is `unknown` — the forward-compatibility path, which fires when a node kind has no
+renderer. Its value is future kinds, contributed by a plugin or a later Host, rendering
+natively instead of as a raw record. **No available session exercises it**, so it is
+verified only for installing cleanly and changing nothing else; the two driven sessions
+re-check unchanged (official tail, official actions, official tool view all present, no
+block error, no console error).
+
+Two owner props are passed inert rather than guessed at: `openSkill`, which belongs to
+the message-skill surface the native chat owns, and `renderMessageImages`, which would
+need the attachment presentation slot — a family this reader does not render. A node
+that needs them degrades instead of misbehaving, and this fork's own record block stays
+as the fallback for a kind nothing claims.
+
+203 tests pass; typecheck and build clean.
+
 ## 0.9.2
 
 The official turn tail: produced-file cards and the plan review row.

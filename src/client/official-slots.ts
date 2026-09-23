@@ -33,12 +33,14 @@ const FAMILIES = {
   actions: 'conversation.chat.assistant-actions',
   tools: 'tool.call.toolview',
   tail: 'conversation.chat.turnTail',
+  nodes: 'conversation.chat.node',
 } as const;
 export type OfficialFamily = keyof typeof FAMILIES;
 export const OFFICIAL_SEATS = {
   actions: 'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions',
   tools: 'dsh-interactive-reader.official.tools/tool.call.toolview',
   tail: 'dsh-interactive-reader.official.tail/conversation.chat.turnTail',
+  nodes: 'dsh-interactive-reader.official.nodes/conversation.chat.node',
 } as const;
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -76,6 +78,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions': SlotMap['conversation.chat.assistant-actions'];
     'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & { kind: 'keyed'; scope: 'session'; owner: OfficialToolOwner };
     'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
+    'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
   }
 }
 
@@ -92,7 +95,19 @@ const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
   // 0.1.6-alpha.2 declares turnTail a list; RC2 declared it a chain, so the live spec
   // is the only thing that can be trusted here.
   tail: { kind: 'list', scope: 'session' },
+  nodes: { kind: 'keyed', scope: 'session' },
 };
+
+/**
+ * Node kinds this reader already presents itself. Everything else reaches the official
+ * renderer through the nodes seat, which is what makes a node kind this fork has never
+ * heard of render natively instead of as a raw record.
+ */
+export const READER_NODES: ReadonlySet<string> = new Set([
+  'user', 'steering', 'assistant-step', 'tool-call', 'turn-tail', 'turn-process',
+  'command', 'manual-compaction', 'compaction', 'context', 'system-prompt',
+  'turn-error', 'turn-max-tokens', 'model-retry',
+]);
 
 /** The documented, type-erased registry inspection/registration boundary. */
 export interface CompositionRegistry {
@@ -253,9 +268,11 @@ export function installOfficialSlots(ctx: Context): () => void {
         if (declared && (declared.kind !== live.kind || declared.scope !== live.scope)) {
           throw new Error(`Official slot contract changed: ${source}`);
         }
-        // The official tool views are exactly what we want here: rendering their
-        // components by hand is what crashed on `useSessions`.
-        return mirrorOfficialSlot(slots, source, officialSeat(family), `dsh-interactive-reader.official.${family}`);
+        // Tool views: mirror all of them — rendering their components by hand is what
+        // crashed on `useSessions`. Node kinds: mirror only the ones this reader does
+        // not present itself, or the same node would render twice.
+        return mirrorOfficialSlot(slots, source, officialSeat(family), `dsh-interactive-reader.official.${family}`,
+          family === 'nodes' ? entry => !READER_NODES.has(entry.options.key ?? '') : undefined);
       }));
     } catch (error) {
       console.warn(`[dsh-interactive-reader] could not lend the official ${family} slot a seat`, error);

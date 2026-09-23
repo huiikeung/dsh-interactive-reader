@@ -29,12 +29,14 @@ declare const FAMILIES: {
     readonly actions: "conversation.chat.assistant-actions";
     readonly tools: "tool.call.toolview";
     readonly tail: "conversation.chat.turnTail";
+    readonly nodes: "conversation.chat.node";
 };
 export type OfficialFamily = keyof typeof FAMILIES;
 export declare const OFFICIAL_SEATS: {
     readonly actions: "dsh-interactive-reader.official.actions/conversation.chat.assistant-actions";
     readonly tools: "dsh-interactive-reader.official.tools/tool.call.toolview";
     readonly tail: "dsh-interactive-reader.official.tail/conversation.chat.turnTail";
+    readonly nodes: "dsh-interactive-reader.official.nodes/conversation.chat.node";
 };
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -73,8 +75,15 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
             owner: OfficialToolOwner;
         };
         'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
+        'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
     }
 }
+/**
+ * Node kinds this reader already presents itself. Everything else reaches the official
+ * renderer through the nodes seat, which is what makes a node kind this fork has never
+ * heard of render natively instead of as a raw record.
+ */
+export declare const READER_NODES: ReadonlySet<string>;
 /** The documented, type-erased registry inspection/registration boundary. */
 export interface CompositionRegistry {
     spec(key: string): SlotSpec<SlotEntryDef> | undefined;

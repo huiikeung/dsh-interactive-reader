@@ -1,6 +1,6 @@
 {
   "name": "dsh-interactive-reader",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",

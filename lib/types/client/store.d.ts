@@ -27,6 +27,8 @@ export interface ReaderState {
 }
 type ReaderActions = {
     setExpanded: (draft: ReaderState, key: string, value: boolean) => void;
+    /** Drop every manual expansion, so a preference change starts from the folded state. */
+    resetExpanded: (draft: ReaderState) => void;
     setMotion: (draft: ReaderState, value: boolean) => void;
     setAutoFold: (draft: ReaderState, value: boolean) => void;
     setDeliverableOpenMode: (draft: ReaderState, value: DeliverableOpenMode) => void;

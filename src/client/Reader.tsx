@@ -715,6 +715,19 @@ export function Reader(props: ReaderProps) {
   );
   const storeAutoFold = props.useStore(state => state.autoFold);
   const autoFold = prefsSnap?.autoFold ?? (prefsSnap?.foldIntensity !== undefined ? prefsSnap.foldIntensity !== 0 : undefined) ?? storeAutoFold ?? true;
+  const previousAutoFold = useRef(autoFold);
+  useLayoutEffect(() => {
+    const restored = autoFold && !previousAutoFold.current;
+    previousAutoFold.current = autoFold;
+    // Watch the effective preference so toolbar and Settings changes behave alike.
+    // Reading while folding is off must not pin completed process content forever:
+    // a row opened by hand while folding was off kept its manual expansion, so
+    // turning folding back on left every earlier step stuck open — the summary
+    // still folded, but the expanded rows never re-collapsed. Dropping the manual
+    // expansions on the OFF→ON edge restores the folded reading state while the
+    // selection guard keeps an active selection expanded.
+    if (restored) props.actions.resetExpanded();
+  }, [autoFold, props.actions]);
   const frostedGlass = frostedGlassOf(prefsSnap);
   const streamMotion = useMemo(() => ({ enabled: motion, activatedAt: activatedAt.current }), [motion]);
   const groups = useMemo(() => groupNodes(order, key => nodes.get(key)), [order, nodes, timeline]);
@@ -894,7 +907,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.7.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="0.7.1" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

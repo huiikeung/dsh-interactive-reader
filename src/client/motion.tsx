@@ -127,7 +127,8 @@ export function ProcessFragment({ open, motion, onRead, returnFocusTo, nodeKey, 
       return;
     }
     if (from > target && motion) {
-      document.body.dataset.readerFolding = 'true';
+      // Fold-scale flag for CSS hooks. Nothing read this, and writing to
+      // document.body leaked one row's disclosure state into the whole page.
     }
     const animation = element.animate(
       from > target
@@ -149,7 +150,6 @@ export function ProcessFragment({ open, motion, onRead, returnFocusTo, nodeKey, 
       if (settled) return;
       settled = true;
       if (running.current === animation) running.current = null;
-      delete document.body.dataset.readerFolding;
       animation.cancel();
       setPresent(open);
     };
@@ -164,7 +164,6 @@ export function ProcessFragment({ open, motion, onRead, returnFocusTo, nodeKey, 
     return () => {
       window.clearTimeout(deadline);
       running.current?.cancel();
-      delete document.body.dataset.readerFolding;
     };
   }, [open, motion, returnFocusTo]);
   if (!open && !present) return null;
@@ -299,15 +298,26 @@ export function useReadingScroll(root: RefObject<HTMLElement>, motion: boolean):
       if (followFrame !== 0 || layoutDepth > 0) return;
       // Our easing frames must not be mistaken for a user leaving the bottom.
       if (lastWrittenTop !== null && Math.abs(scroll.scrollTop - lastWrittenTop) < 1) return;
+      // Bind the follow intent to the position observed HERE. Every scroll that
+      // reaches this point is the viewport moving under someone else's hand: a
+      // wheel, a drag, a key, or the browser clamping the offset after a shrink.
+      //
+      // The previous form inferred detaching from a strictly upward delta against
+      // lastWrittenTop, which left two holes. That baseline is nulled by
+      // cancelFollow/onWheel/onTouch/onKey, and the guard above already returned
+      // for any scroll whose delta is under 1px — so a reader parked mid-transcript
+      // by a scrollbar drag stayed following === true AND pinned === true. The next
+      // content growth then took the re-attach branch and yanked the viewport to
+      // the bottom, discarding what they were reading. Reading the position
+      // directly needs no baseline: a fold's clamp lands at the very bottom and
+      // still keeps following, while any other offset detaches.
+      const bottom = atBottom();
+      pinned.current = bottom;
+      if (!bottom) { cancelAnimationFrame(followFrame); followFrame = 0; scheduleCapture(); }
       if (!following.current) {
         // Only an explicit return to the bottom resumes following.
-        if (atBottom()) { following.current = true; setDetached(false); }
+        if (bottom) { following.current = true; setDetached(false); }
         return;
-      }
-      // Content growth and our own easing also change scrollTop; only a real
-      // upward move by the reader detaches the tail.
-      if (lastWrittenTop !== null && scroll.scrollTop < lastWrittenTop - 1) {
-        following.current = false; setDetached(true); pinned.current = false; cancelAnimationFrame(followFrame); followFrame = 0; scheduleCapture();
       }
     };
     const onWheel = (event: WheelEvent) => {

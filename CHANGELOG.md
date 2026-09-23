@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.7.1
+
+Ports three fixes from upstream `aa2246740/dsh-better-display` v0.3.0. Each was a real
+defect that also existed here, because both sides sit on the same v0.2.1 base upstream
+fixed on top of.
+
+### Scroll-follow no longer yanks the reader to the bottom
+
+A reader parked mid-transcript — a scrollbar drag, a key, any scroll whose delta
+against `lastWrittenTop` was under 1px — kept `following` and `pinned` true, because
+that baseline is nulled by `cancelFollow`/`onWheel`/`onTouch`/`onKey` and the guard
+already returns for sub-pixel deltas. The next content growth then took the re-attach
+branch and jumped the viewport to the bottom, discarding what they were reading.
+
+The follow intent is now bound to the position observed at the scroll event itself:
+a fold's clamp lands at the very bottom and still keeps following, any other offset
+detaches. No baseline to null, so no hole to fall through. The unused global
+`document.body.dataset.readerFolding` writes are gone with it — one row's disclosure
+state never belonged on `document.body`.
+
+### Turning auto-fold back on actually re-collapses
+
+Folding off, opening rows by hand, then folding back on left every earlier step stuck
+open: the summary folded but the manually expanded rows never re-collapsed, because the
+`expanded` map survives the preference change. Reader now watches the *effective*
+preference (prefs first, store as fallback, so toolbar and Settings behave alike) and
+drops the manual expansions on the OFF→ON edge. The selection guard still keeps an
+active selection expanded.
+
+### Code interpreters render as terminal output
+
+`run_code` had no category of its own and fell through to `other`, which has no
+renderer — so its output was emitted as ordinary prose and sat in the transcript
+outside every fold, exactly the block the reader wanted to close. A new `code` category
+renders it through `TerminalBlock` with command, cwd, exit code and signal, using the
+same labels as a shell call.
+
+### Not ported
+
+Upstream v0.3.0's headline feature — a bridge mapping official component registrations
+(feedback, tool details, file cards, line numbers, local images) into the reader's own
+slots — is not included. It is a ~640-line architectural change validated against
+Harness 0.1.5-rc.2, this fork targets 0.1.6-alpha.2, and it removes `getToolView`, which
+this fork builds on. It is a separate effort, not a drop-in.
+
+191 tests pass; typecheck and build clean. Verified in the running GUI: the reader root
+renders at 0.7.0 with the new build served, and the host bundle carries all three fixes.
+
 ## 0.7.0
 
 Renamed: **`dsh-better-display` → `dsh-interactive-reader`**.

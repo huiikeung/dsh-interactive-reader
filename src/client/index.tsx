@@ -1,6 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
+import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { resolveWorkspacePath } from '@deepseek-ai/dsh-util-workspace-path';
 import * as workspacePathPkg from '@deepseek-ai/dsh-util-workspace-path';
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client';
@@ -339,6 +340,10 @@ export function apply(ctx: Context): void {
         // The Host's own prose file-mention resolver, consumed exactly as the official
         // chat consumes it. Optional service: absent wherever no provider is installed,
         // which is why the reading tab also keeps its own produced-path matcher.
+        officialImageLoader: Object.assign(
+          (attachment: ImageAttachmentRef) => ctx.uiConversation.imageUrl(sessionId, attachment),
+          { peek: (attachment: ImageAttachmentRef) => ctx.uiConversation.peekImageUrl(sessionId, attachment) },
+        ),
         officialFileMentions: owner => {
           try {
             return ctx.get('chatFileMentions')?.forClosing(owner, sessionId);

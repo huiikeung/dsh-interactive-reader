@@ -10,6 +10,7 @@ import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity
 import type { BlockRenderProps } from './types.js';
 import { classifyTool, toolRowModel, VARIANT_TITLES } from './native/tool-call-model.js';
 import { McpAppFrame, StreamingMcpAppPlaceholder } from './McpAppFrame.js';
+import { OfficialTool } from './OfficialTool.js';
 import { diffBlockLabels, jsonTreeLabels, readBlockLabels, searchBlockLabels, terminalBlockLabels, webBlockLabels } from './primitive-labels.js';
 import css from './Reader.module.css';
 
@@ -114,9 +115,15 @@ function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { ent
   const text = block.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
   if (phase === 'interrupted') return <><p className={css.toolDetailNote}>工具已取消，未正常完成。输入和原始返回记录仍可查看。</p><InputView model={model} preparing={false} fillComposer={render.fillComposer} /><pre className={css.toolRaw}>{text}</pre></>;
 
+  // The official view, through our seat, so the platform supplies a view's own
+  // `PropsRuntime` — the standard session seats a hand-render never passes, which is
+  // exactly what made this crash with `useSessions is not a function`. Our own preview
+  // stays as the fallback for a tool nothing claims.
   const CustomToolView = render.getToolView?.(model.name);
   if (CustomToolView) {
-    return <CustomToolWrapper Component={CustomToolView} block={block} toolName={model.name} cwd={model.cwd} openFile={render.openFile} />;
+    return <OfficialTool renderSlot={render.renderSlot} block={block} toolName={model.name} cwd={model.cwd}
+      loadImage={render.officialImageLoader} openFile={render.openFile}
+      fallback={<CustomToolWrapper Component={CustomToolView} block={block} toolName={model.name} cwd={model.cwd} openFile={render.openFile} />} />;
   }
 
   if (model.category === 'terminal') {

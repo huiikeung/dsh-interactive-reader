@@ -1,6 +1,8 @@
 import { createElement, memo, useMemo, type ComponentType, type ReactNode } from 'react';
 import type { Context } from '@deepseek-ai/cordis';
 import type { SlotEntryDef, SlotMap, SlotSpec, StoredEntry } from '@deepseek-ai/dsh-client-ui-slots';
+import type { ToolCallBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
 
 /**
@@ -29,19 +31,48 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
 /** Host-declared slots this reader borrows, and the Reader-owned seats it renders them in. */
 const FAMILIES = {
   actions: 'conversation.chat.assistant-actions',
+  tools: 'tool.call.toolview',
 } as const;
 export type OfficialFamily = keyof typeof FAMILIES;
 export const OFFICIAL_SEATS = {
   actions: 'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions',
+  tools: 'dsh-interactive-reader.official.tools/tool.call.toolview',
 } as const;
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
 export const officialSeat = (family: OfficialFamily, source: string = FAMILIES[family]) =>
   `dsh-interactive-reader.official.${family}/${source}`;
 
+/**
+ * The official `tool.call.toolview` owner share, mirrored structurally.
+ *
+ * `@deepseek-ai/dsh-client-ui-tool` is deliberately not a dependency: it carries the
+ * whole tool-UI layer, and a profile that installs no tool view should not be made to
+ * depend on it. Every type it needs is re-exported by packages we already depend on,
+ * so this mirror keeps the render site type-checked — passing a wrong owner prop is
+ * the real risk here, and this keeps it a compile error. If the official owner ever
+ * grows a field, this is where it must be added.
+ *
+ * The rest of a tool view's props (`useSessions`, `useSession`, the standard session
+ * seats) come from `PropsRuntime` and are supplied by the platform, not by us — which
+ * is precisely why rendering a view component by hand crashed: it was handed four
+ * props and asked for `useSessions`.
+ */
+export interface OfficialToolOwner {
+  callId: string;
+  toolName: string;
+  block: ToolCallBlock;
+  cwd?: string | undefined;
+  home?: string | undefined;
+  openFile: (path: string, options?: OpenFileOptions) => void;
+  loadImage: MessageImageLoader;
+  inspect?: (() => void) | undefined;
+}
+
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface SlotMap {
     'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions': SlotMap['conversation.chat.assistant-actions'];
+    'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & { kind: 'keyed'; scope: 'session'; owner: OfficialToolOwner };
   }
 }
 
@@ -54,6 +85,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
  */
 const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
   actions: { kind: 'list', scope: 'session' },
+  tools: { kind: 'keyed', scope: 'session' },
 };
 
 /** The documented, type-erased registry inspection/registration boundary. */
@@ -181,6 +213,8 @@ export function installOfficialSlots(ctx: Context): () => void {
         if (declared && (declared.kind !== live.kind || declared.scope !== live.scope)) {
           throw new Error(`Official slot contract changed: ${source}`);
         }
+        // The official tool views are exactly what we want here: rendering their
+        // components by hand is what crashed on `useSessions`.
         return mirrorOfficialSlot(slots, source, officialSeat(family), `dsh-interactive-reader.official.${family}`);
       }));
     } catch (error) {

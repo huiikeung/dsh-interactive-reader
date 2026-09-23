@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
-import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { AssistantBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots';
 import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
@@ -98,13 +98,14 @@ export interface ReaderInjected {
    * supplies it to its tool views and message images. The URL's lifetime is the Host's
    * business, so no object URL is ever created (or leaked) here.
    */
+  officialImageLoader?: MessageImageLoader;
 }
 export type ReaderProps = PropsRuntime<'conversation.view'>
   & PropsLocale<'chat'>
   & PropsRenderSlots<'dsh-interactive-reader.block' | OfficialSeat>
   & PropsStore<ReturnType<typeof createReaderStore>>
   & ReaderInjected;
-export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView'> & {
+export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader'> & {
   openFile?: (path: string) => Promise<void> | void;
   revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
   /** The Host's own view of what it can open natively; shared, memoized probe. */

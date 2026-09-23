@@ -1,5 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type { SlotEntryDef, SlotMap, SlotSpec, StoredEntry } from '@deepseek-ai/dsh-client-ui-slots';
+import type { ToolCallBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
+import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client';
 /**
  * Composition adapter for the Host's own renderers.
  *
@@ -25,17 +27,49 @@ import type { SlotEntryDef, SlotMap, SlotSpec, StoredEntry } from '@deepseek-ai/
 /** Host-declared slots this reader borrows, and the Reader-owned seats it renders them in. */
 declare const FAMILIES: {
     readonly actions: "conversation.chat.assistant-actions";
+    readonly tools: "tool.call.toolview";
 };
 export type OfficialFamily = keyof typeof FAMILIES;
 export declare const OFFICIAL_SEATS: {
     readonly actions: "dsh-interactive-reader.official.actions/conversation.chat.assistant-actions";
+    readonly tools: "dsh-interactive-reader.official.tools/tool.call.toolview";
 };
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
 export declare const officialSeat: (family: OfficialFamily, source?: string) => string;
+/**
+ * The official `tool.call.toolview` owner share, mirrored structurally.
+ *
+ * `@deepseek-ai/dsh-client-ui-tool` is deliberately not a dependency: it carries the
+ * whole tool-UI layer, and a profile that installs no tool view should not be made to
+ * depend on it. Every type it needs is re-exported by packages we already depend on,
+ * so this mirror keeps the render site type-checked — passing a wrong owner prop is
+ * the real risk here, and this keeps it a compile error. If the official owner ever
+ * grows a field, this is where it must be added.
+ *
+ * The rest of a tool view's props (`useSessions`, `useSession`, the standard session
+ * seats) come from `PropsRuntime` and are supplied by the platform, not by us — which
+ * is precisely why rendering a view component by hand crashed: it was handed four
+ * props and asked for `useSessions`.
+ */
+export interface OfficialToolOwner {
+    callId: string;
+    toolName: string;
+    block: ToolCallBlock;
+    cwd?: string | undefined;
+    home?: string | undefined;
+    openFile: (path: string, options?: OpenFileOptions) => void;
+    loadImage: MessageImageLoader;
+    inspect?: (() => void) | undefined;
+}
 declare module '@deepseek-ai/dsh-client-ui-slots' {
     interface SlotMap {
         'dsh-interactive-reader.official.actions/conversation.chat.assistant-actions': SlotMap['conversation.chat.assistant-actions'];
+        'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & {
+            kind: 'keyed';
+            scope: 'session';
+            owner: OfficialToolOwner;
+        };
     }
 }
 /** The documented, type-erased registry inspection/registration boundary. */

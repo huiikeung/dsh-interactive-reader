@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.9.1
+
+Tool details render through the official views — and that fixes a real crash.
+
+### The bug
+
+A tool call whose tool has a registered `tool.call.toolview` view crashed in the
+reading tab with
+
+```
+此内容暂时无法在阅读页显示；原对话中的记录未受影响。（useSessions is not a function）
+```
+
+The reader hand-rendered the view component with four props (`block`, `toolName`,
+`cwd`, `openFile`) and simulated a click to expand it. A view's own props come from
+`PropsRuntime` — the standard session seats the platform supplies when *it* renders a
+slot entry — and none of those were passed, so `BashRow` died the moment it selected
+its session slice. Every session with a bash / read / write / present / skill call hit
+this, which is why no reading tab had ever shown a tool card.
+
+### The fix
+
+`tool.call.toolview` is now mirrored and rendered like the actions strip. The platform
+supplies the view's `PropsRuntime`, its injected state, its locale and translations, its
+memo, and the recursive sub-views of entries that declare child slots — the cordis
+family does, and a second declarer of the same sub-slot key is a load-time throw. The
+hand-render and its click simulation are gone.
+
+This fork's own preview stays as the fallback for a tool nothing claims, so an
+unregistered tool still shows its result instead of nothing.
+
+Verified on a session built for it: the official Bash view renders with its title, its
+status, the command and its copy button, the block error is gone, and no console error
+is thrown. Other sessions re-checked: the actions strip still renders and the reader is
+otherwise unchanged.
+
+201 tests pass; typecheck and build clean.
+
 ## 0.9.0
 
 Two more pieces of the official-component bridge: prose file mentions, and the

@@ -14,7 +14,7 @@ contributions a Reader-owned seat; no official component is reimplemented.
 Prefer npm (version-pinable):
 
 ```sh
-dsh plugin --profile web add dsh-interactive-reader@0.8.0
+dsh plugin --profile web add dsh-interactive-reader@0.8.1
 ```
 
 Or latest:

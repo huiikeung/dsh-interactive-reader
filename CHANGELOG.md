@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.8.1
+
+Markdown images with a local path now render instead of degrading to alt text.
+
+`![图](/vol1/1000/a.png)` is not a URL, so the protocol allowlist rejected it and the
+renderer fell back to the alt text. The Host serves workspace files at
+`/api/file?path=…` on the same origin — the same `localPathMediaUrl` the official chat
+markdown uses — and `platform-media.ts` now builds that URL as a fallback, mirroring
+the Host's conditions exactly: only http/https pages, only absolute POSIX paths, never
+protocol-relative, relative or empty destinations, and the path is percent-encoded.
+
+Authorization stays Host-side. This only builds the URL; the Host's file API decides
+whether the path may be read, so an inaccessible file still fails as an image request
+and keeps the alt fallback rather than leaking anything.
+
+199 tests pass; typecheck and build clean. The endpoint was verified live against the
+running Host (HTTP 200 serving a workspace file), and the reading tab was re-checked
+afterwards: the reader, the official actions strip and this fork's own row all still
+render with no console error.
+
 ## 0.8.0
 
 The reading tab now shows the official answer actions, starting with feedback.

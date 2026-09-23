@@ -26,6 +26,7 @@ import { normalizeUri } from 'micromark-util-sanitize-uri'
 import { CodeBlock } from '@deepseek-ai/dsh-client-ui-primitives'
 import { renderTexToReact } from './katex.js'
 import { McpAppCodeBlock, StreamingMcpAppPlaceholder } from '../McpAppFrame.js'
+import { pathImages } from '../platform-media.js'
 import { isMcpAppCodeBlock, extractMcpAppTitle, extractMcpAppHeight } from '../mcp-app.js'
 import type { PositionedBlock } from './incremental.js'
 import css from './MarkdownText.module.css'
@@ -516,7 +517,9 @@ function inlineCodeHttpUrl(value: string): string | undefined {
 }
 
 function renderImage(url: string, alt: string, key: Key): ReactNode {
-  const imageSrc = remoteImageUrl(sanitizeUrl(normalizeUri(url)))
+  // An absolute POSIX path is not a URL, so the allowlist rejects it; the Host serves
+  // workspace files on this origin, which is what the official chat markdown uses.
+  const imageSrc = remoteImageUrl(sanitizeUrl(normalizeUri(url))) ?? pathImages.resolve(url)
   if (imageSrc === undefined) {
     return <span key={key} className={css.imageAlt}>{alt}</span>
   }

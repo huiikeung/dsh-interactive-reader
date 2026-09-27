@@ -18,8 +18,15 @@ export interface SkillStatusProbe {
 export declare function detectGenerativeMcpappsSkill(probe: SkillStatusProbe): Promise<SkillStatusSnapshot>;
 /** mkdir/cp using conventional relative roots only. Host paths are ignored. */
 export declare function shortestInstallCommand(_status?: Pick<SkillStatusSnapshot, 'packPath' | 'roots'>): string;
-/** Host route the plugin's own Host half registers for this question. */
-export declare const SKILL_STATUS_ROUTE = "/interactive-reader/skill-status";
+/**
+ * Host route the plugin's own Host half registers for this question.
+ *
+ * Deliberately relative (no leading slash): the reading page can live under a path
+ * prefix — the fnOS app gateway serves it from /app/deepseek-harness/fngateway/ — and
+ * an absolute path would leave the prefix behind and 404 at the desktop's nginx.
+ * Resolved against the document base, the same request works rooted and embedded.
+ */
+export declare const SKILL_STATUS_ROUTE = "interactive-reader/skill-status";
 /**
  * How long one probe call may take before it reads as "no answer".
  *

@@ -4,7 +4,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import type {} from './settings-slots.js';
 import { settingsCopyFor, zh, en } from './settings-copy.js';
 import { SettingsSection, type BetterDisplaySettingsInjected, type OpenPrefs } from './SettingsSection.js';
-import { composeSkillProbe, firstSessionId, routeSkillProbe, skillsFromListResult, type SkillStatusProbe } from './skill-status.js';
+import { composeSkillProbe, firstSessionId, routeSkillProbe, SKILL_STATUS_ROUTE, skillsFromListResult, type SkillStatusProbe } from './skill-status.js';
 import type { HostSkillStatus } from '../skill-status.js';
 
 interface LocaleFace {
@@ -36,9 +36,11 @@ function createSkillProbe(ctx: Context): SkillStatusProbe {
       const snap = ctx.sessions.list.getSnapshot();
       const id = firstSessionId(snap);
       const cwd = id === undefined ? undefined : snap.byId[id]?.cwd;
+      // SKILL_STATUS_ROUTE is relative so the request follows the document base — the
+      // fnOS app gateway serves this page under /app/deepseek-harness/fngateway/.
       const url = cwd
-        ? `/interactive-reader/skill-status?cwd=${encodeURIComponent(cwd)}`
-        : '/interactive-reader/skill-status';
+        ? `${SKILL_STATUS_ROUTE}?cwd=${encodeURIComponent(cwd)}`
+        : SKILL_STATUS_ROUTE;
       const res = await fetch(url);
       if (!res.ok) return undefined;
       return await res.json() as HostSkillStatus;

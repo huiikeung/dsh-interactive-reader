@@ -71,8 +71,15 @@ export function shortestInstallCommand(_status?: Pick<SkillStatusSnapshot, 'pack
   return `mkdir -p ${dest} && cp -R ${SKILL_PACK_RELATIVE} ${dest}/`;
 }
 
-/** Host route the plugin's own Host half registers for this question. */
-export const SKILL_STATUS_ROUTE = '/interactive-reader/skill-status';
+/**
+ * Host route the plugin's own Host half registers for this question.
+ *
+ * Deliberately relative (no leading slash): the reading page can live under a path
+ * prefix — the fnOS app gateway serves it from /app/deepseek-harness/fngateway/ — and
+ * an absolute path would leave the prefix behind and 404 at the desktop's nginx.
+ * Resolved against the document base, the same request works rooted and embedded.
+ */
+export const SKILL_STATUS_ROUTE = 'interactive-reader/skill-status';
 
 /**
  * How long one probe call may take before it reads as "no answer".

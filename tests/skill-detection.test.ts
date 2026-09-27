@@ -29,7 +29,7 @@ test('the direct route probe reads the answer from the plugin\'s own route', asy
   const probe = routeSkillProbe(fetcher(async () => { seen.push('called'); return answer(HOST_STATUS); }));
   assert.deepEqual(await probe.fetchHostStatus!(), HOST_STATUS);
   assert.deepEqual(seen, ['called']);
-  assert.equal(SKILL_STATUS_ROUTE, '/interactive-reader/skill-status');
+  assert.equal(SKILL_STATUS_ROUTE, 'interactive-reader/skill-status');
 });
 
 test('a failed or non-OK request reads as no answer, never as an answer', async () => {

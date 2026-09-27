@@ -93,3 +93,37 @@ test('a remote skills list still counts as installed when the Host route is sile
   assert.equal(status.installed, true);
   assert.equal(status.via, 'skills.list');
 });
+
+/**
+ * The section disables its Re-check button while a check is in flight. A probe that
+ * never settles therefore used to leave the button stuck on "Checking…" and the tag on
+ * "Not detected" forever — the failure this bounds.
+ */
+const never = () => new Promise<never>(() => {});
+
+test('a request that never returns reads as no answer instead of hanging', async () => {
+  const probe = routeSkillProbe(fetcher(() => never() as Promise<Response>), 20);
+  const settled = await probe.fetchHostStatus!();
+  assert.equal(settled, undefined);
+});
+
+test('a Context probe that never settles falls through to the route', async () => {
+  const probe = composeSkillProbe(
+    { fetchHostStatus: () => never() as Promise<never> },
+    routeSkillProbe(fetcher(async () => answer(HOST_STATUS)), 20),
+    20,
+  );
+  const status = await detectGenerativeMcpappsSkill(probe);
+  assert.equal(status.installed, true);
+  assert.equal(status.hostReached, true);
+});
+
+test('a remote skills call that never settles cannot stall the report either', async () => {
+  const probe = composeSkillProbe({
+    fetchHostStatus: () => never() as Promise<never>,
+    listRemoteSkills: () => never() as Promise<never>,
+  }, routeSkillProbe(fetcher(async () => answer(HOST_STATUS)), 20), 20);
+  const status = await detectGenerativeMcpappsSkill(probe);
+  assert.equal(status.installed, true);
+  assert.equal(status.hostReached, true);
+});

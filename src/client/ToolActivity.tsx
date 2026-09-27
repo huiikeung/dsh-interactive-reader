@@ -2,7 +2,7 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { DiffHunk, ReadBlockLine, SearchFileGroup } from '@deepseek-ai/dsh-client-ui-primitives';
 import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlock, WebBlock,
-  IconApiOutline14, IconBrowseOutline16, IconEditOutline16, IconSearchOutline16, IconSkillOutline16, IconSparkle16 } from '@deepseek-ai/dsh-client-ui-primitives';
+  IconApiOutlineRegular, IconBrowseOutlineRegular, IconEditOutlineRegular, IconSearchOutlineRegular, IconSkillOutlineRegular, IconSparkleRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Blocks, contentBlocks } from './Blocks.js';
 import { ProcessFragment } from './motion.js';
 import { activityPhase, activitySummary, callDiffHunks, diffTotals, executionFacts, objectValue, toolIdentity } from './tool-activity.js';
@@ -15,7 +15,7 @@ import { diffBlockLabels, jsonTreeLabels, readBlockLabels, searchBlockLabels, te
 import css from './Reader.module.css';
 
 const LABEL: Record<ToolPhase, string> = { preparing: '输入生成中', running: '执行中', returned: '已返回', succeeded: '已完成', failed: '失败', interrupted: '已中断' };
-const ICONS = { write: IconEditOutline16, read: IconBrowseOutline16, terminal: IconApiOutline14, search: IconSearchOutline16, web: IconSearchOutline16, code: IconApiOutline14, other: IconSparkle16 } satisfies Record<ToolCategory, unknown>;
+const ICONS = { write: IconEditOutlineRegular, read: IconBrowseOutlineRegular, terminal: IconApiOutlineRegular, search: IconSearchOutlineRegular, web: IconSearchOutlineRegular, code: IconApiOutlineRegular, other: IconSparkleRegular } satisfies Record<ToolCategory, unknown>;
 const number = new Intl.NumberFormat('zh-CN');
 const language = (path: string | undefined) => path?.split('.').at(-1);
 const duration = (ms: number) => ms < 1000 ? `${Math.round(ms)} 毫秒` : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} 秒`;
@@ -81,28 +81,18 @@ function searchFiles(value: unknown): SearchFileGroup[] | null {
   return files;
 }
 
-function CustomToolWrapper({ Component, block, toolName, cwd, openFile }: {
-  Component: any;
-  block: any;
-  toolName: string;
-  cwd?: string;
-  openFile?: (path: string) => Promise<void> | void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // If the component renders a collapsed disclosure row (like DiffCard with role="button" and aria-expanded="false"),
-    // expand it automatically once so details are immediately visible inside ResultView.
-    const row = containerRef.current?.querySelector<HTMLElement>('[role="button"][aria-expanded="false"]');
-    if (row) row.click();
-  }, []);
-  return (
-    <div ref={containerRef} data-reader-tool-custom>
-      <Component block={block} toolName={toolName} cwd={cwd} openFile={openFile} />
-    </div>
-  );
+function ResultView(props: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
+  const { entry, model } = props;
+  const fallback = <ResultFallback {...props} />;
+  // The official view renders through our mirrored `tool.call.toolview` seat, so the
+  // platform supplies the view's own `PropsRuntime`. Everything this fork presents
+  // itself stays on the hand-rendered path below.
+  if (!entry.block || model.name === 'render_ui' || model.name === 'show_widget') return fallback;
+  return <OfficialTool renderSlot={props.renderSlot} openFile={props.openFile}
+    loadImage={props.officialImageLoader} block={entry.block} toolName={model.name} cwd={model.cwd} fallback={fallback} />;
 }
 
-function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
+function ResultFallback({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
   if ((model.name === 'render_ui' || model.name === 'show_widget') && typeof model.args?.html === 'string') {
     return <McpAppFrame html={model.args.html as string} title={typeof model.args.title === 'string' ? (model.args.title as string) : undefined} fillComposer={render.fillComposer} />;
   }
@@ -114,17 +104,6 @@ function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { ent
   const meta = objectValue(block.meta);
   const text = block.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
   if (phase === 'interrupted') return <><p className={css.toolDetailNote}>工具已取消，未正常完成。输入和原始返回记录仍可查看。</p><InputView model={model} preparing={false} fillComposer={render.fillComposer} /><pre className={css.toolRaw}>{text}</pre></>;
-
-  // The official view, through our seat, so the platform supplies a view's own
-  // `PropsRuntime` — the standard session seats a hand-render never passes, which is
-  // exactly what made this crash with `useSessions is not a function`. Our own preview
-  // stays as the fallback for a tool nothing claims.
-  const CustomToolView = render.getToolView?.(model.name);
-  if (CustomToolView) {
-    return <OfficialTool renderSlot={render.renderSlot} block={block} toolName={model.name} cwd={model.cwd}
-      loadImage={render.officialImageLoader} openFile={render.openFile}
-      fallback={<CustomToolWrapper Component={CustomToolView} block={block} toolName={model.name} cwd={model.cwd} openFile={render.openFile} />} />;
-  }
 
   if (model.category === 'terminal') {
     const facts = executionFacts(block);
@@ -204,7 +183,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
     return () => document.removeEventListener('selectionchange', track);
   }, []);
   const facts = executionFacts(entry.block);
-  const Icon = model.name === 'skill' ? IconSkillOutline16 : ICONS[model.category];
+  const Icon = model.name === 'skill' ? IconSkillOutlineRegular : ICONS[model.category];
   const block = entry.block;
   const native = block ? toolRowModel(model.name, block) : null;
   const skillName = typeof model.args?.name === 'string' ? model.args.name.split('\n')[0] : model.raw.split('\n')[0];
@@ -285,7 +264,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   && previous.entry.draft === next.entry.draft && previous.entry.step === next.entry.step
   && previous.motion === next.motion && previous.turnClosed === next.turnClosed && previous.depth === next.depth
   && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage && previous.fillComposer === next.fillComposer
-  && previous.getToolView === next.getToolView);
+  && previous.openFile === next.openFile);
 
 /** Rich media (images, MCP widgets) rendered outside the folded tool ledger. */
 export function ToolMedia({ block, depth = 0, ...render }: BlockRenderProps & { block: ToolCallBlock; depth?: number }) {

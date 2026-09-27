@@ -14,7 +14,7 @@ contributions a Reader-owned seat; no official component is reimplemented.
 Prefer npm (version-pinable):
 
 ```sh
-dsh plugin --profile web add dsh-interactive-reader@1.0.0
+dsh plugin --profile web add dsh-interactive-reader@1.1.0
 ```
 
 Or latest:
@@ -43,7 +43,7 @@ Tool calls that changed files carry `+A -R` statistics and open a per-file diff 
 
 A ````mcp-app` fence in the final answer mounts as an interactive card in the reading view, inside `<iframe sandbox="allow-scripts allow-forms">` without `allow-same-origin`. The card can fill the next prompt via JSON-RPC. The skill pack is [`skills/generative-mcpapps/`](skills/generative-mcpapps/). Settings → **Interactive Reader** can preview deliverables in the right Sidebar (system app remains the default), turn on translucent frosted glass (off by default), toggle process auto-folding (On is the default), and reports whether that skill is installed in a harness skill root.
 
-Targets DeepSeek Harness **0.1.6-alpha.2**. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`. New sessions default to reading.
+Targets DeepSeek Harness **0.1.7-rc.2**. Display only. It does not change Agent execution, the SDK, or credentials. Node.js `^22.19.0 || >=24`. New sessions default to reading.
 
 From a local checkout or tarball:
 

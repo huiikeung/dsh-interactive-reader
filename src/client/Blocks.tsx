@@ -174,6 +174,7 @@ export function CopyAnswer({ blocks, onFork, metrics, extraActions }: { blocks: 
         <CopyGlyph />
       </button>
     )}
+    {extraActions}
     {onFork && (
       <button
         type="button"

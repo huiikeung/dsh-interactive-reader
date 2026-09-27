@@ -24,6 +24,9 @@ const foldLabels = {
 
 export const readBlockLabels: ReadBlockLabels = {
   ...foldLabels,
+  codeLabel: '代码',
+  wrapLabel: '自动换行',
+  unwrapLabel: '不换行',
   window: (shown, total) => `显示 ${shown} / 共 ${total} 行`,
 };
 
@@ -40,7 +43,9 @@ export const terminalBlockLabels: TerminalBlockLabels = {
 
 export const diffBlockLabels: DiffBlockLabels = {
   ...foldLabels,
-  files: count => `${count} 个文件`,
+  codeLabel: '代码',
+  wrapLabel: '自动换行',
+  unwrapLabel: '不换行',
 };
 
 export const searchBlockLabels: SearchBlockLabels = {

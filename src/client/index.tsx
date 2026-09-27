@@ -1,5 +1,7 @@
 import type { Context } from '@deepseek-ai/cordis';
+import type {} from '@deepseek-ai/dsh-api-remotes/client';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
+import type {} from '@deepseek-ai/dsh-client-connection/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
 import { resolveWorkspacePath } from '@deepseek-ai/dsh-util-workspace-path';
@@ -152,7 +154,7 @@ function openFolderPane(ctx: Context, folder: string): boolean {
 export type { ReaderBlockOwner } from './types.js';
 export { McpAppFrame } from './McpAppFrame.js';
 export const name = 'dsh-interactive-reader-client';
-export const inject = ['slots', 'sessions', 'conversation', 'remote', 'remote.session', 'remote.workspaceFiles'];
+export const inject = ['slots', 'sessions', 'conversation', 'uiConversation', 'remote', 'remote.session', 'remote.workspaceFiles'];
 
 export function apply(ctx: Context): void {
   const store = createReaderStore();
@@ -193,13 +195,24 @@ export function apply(ctx: Context): void {
         probeRevealDesktop: () => probeRevealDesktop(ctx),
         fnosFileManagerTemplate: () => fnosTemplateOf(prefs),
         revealPaneAvailable: () => typeof sidebarRightOf(ctx)?.openResource === 'function',
+        officialImageLoader: Object.assign(
+          (attachment: ImageAttachmentRef) => ctx.uiConversation.imageUrl(sessionId, attachment),
+          { peek: (attachment: ImageAttachmentRef) => ctx.uiConversation.peekImageUrl(sessionId, attachment) },
+        ),
+        officialFileMentions: owner => {
+          try {
+            return ctx.get('chatFileMentions')?.forClosing(owner, sessionId);
+          } catch {
+            return undefined;
+          }
+        },
         loadOlder: async () => { await session().loadOlder(); },
         loadImage: async attachment => {
           const receipt = await session().readAttachment(attachment.attachmentId);
           if (!receipt.ok) throw new Error(receipt.error.message);
           return { data: Uint8Array.from(receipt.value.data), mediaType: receipt.value.attachment.mediaType };
         },
-        openFile: async (path: string) => {
+        openFile: async (path, options) => {
           try {
             const cwd = ctx.sessions?.list?.getSnapshot?.()?.byId[sessionId]?.cwd;
             const sidebar = (
@@ -214,7 +227,7 @@ export function apply(ctx: Context): void {
               resolveWorkspacePath,
               openExternal: async (absolutePath) => { await openWorkspacePath(ctx, absolutePath); },
               openSidebar: typeof sidebar?.openResource === 'function'
-                ? (address) => { sidebar.openResource!(address); }
+                ? (address) => { sidebar.openResource!(address, options?.line === undefined ? undefined : { params: { line: options.line } }); }
                 : undefined,
               fileAddressFor: officialFileAddressFor ?? fileAddressFor,
               warn: (message, extra) => { console.warn(message, extra); },
@@ -340,17 +353,6 @@ export function apply(ctx: Context): void {
         // The Host's own prose file-mention resolver, consumed exactly as the official
         // chat consumes it. Optional service: absent wherever no provider is installed,
         // which is why the reading tab also keeps its own produced-path matcher.
-        officialImageLoader: Object.assign(
-          (attachment: ImageAttachmentRef) => ctx.uiConversation.imageUrl(sessionId, attachment),
-          { peek: (attachment: ImageAttachmentRef) => ctx.uiConversation.peekImageUrl(sessionId, attachment) },
-        ),
-        officialFileMentions: owner => {
-          try {
-            return ctx.get('chatFileMentions')?.forClosing(owner, sessionId);
-          } catch {
-            return undefined;
-          }
-        },
       };
     },
     }, Reader);

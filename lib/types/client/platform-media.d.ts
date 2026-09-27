@@ -11,10 +11,15 @@
  * file API decides whether the path may be read. A destination that is not an absolute
  * POSIX path on an HTTP(S) page resolves to nothing and keeps the alt fallback, so a
  * protocol-relative, relative, or Electron `file://` destination is never turned into
- * a request.
+ * a request. The Desktop application base (`dsh-app://app`) follows the official
+ * `fileMediaUrl` allowlist the same way.
  */
 export declare function localPathMediaUrl(protocol: string, origin: string, value: string): string | undefined;
 /** Resolve an authored destination against the current page, as the Host sees it. */
+export declare const readerPathImages: {
+    resolve: (value: string) => string | undefined;
+};
+/** Markdown-facing alias kept for the local renderer import. */
 export declare const pathImages: {
     resolve: (value: string) => string | undefined;
 };

@@ -231,6 +231,9 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   if (isNode(node, 'turn-max-tokens')) return <div className={css.notice}>已到达输出长度限制，回答尚未完整。</div>;
   if (isNode(node, 'model-retry')) return node.data.current.retryState === 'scheduled'
     ? <div className={css.notice} role="status">模型请求未成功，正在等待重试。详情保留在执行过程中。</div> : null;
+  if (isNode(node, 'command')) return <OfficialNode renderSlot={render.renderSlot} node={node}
+    loadImage={render.officialImageLoader} officialFileMentions={render.officialFileMentions}
+    fallback={<JsonBlock label="命令记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />} />;
   if (isNode(node, 'command')) {
     if (node.data.outcome?.kind === 'error') return <div className={css.error} role="alert">
       <svg className={css.errorIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -262,7 +265,7 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
     fallback={<div className={css.unknown} data-reader-anchor>
       <p>此记录类型暂未接入阅读页：{node.kind}</p>
       <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
-    </div>} />;
+    </div>} />
 });
 
 /**
@@ -607,6 +610,10 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
       : item.key === key || ('nodeKey' in item.step && item.step.nodeKey === key)));
   const expanded = !autoFold || holdingSelection || processExpanded(expansionChoice, boundary);
   const [foldOpenByKey, setFoldOpenByKey] = useState<Record<string, boolean>>({});
+  useLayoutEffect(() => {
+    // Restoring automatic folding also releases live "prior steps" disclosures.
+    if (autoFold) setFoldOpenByKey(current => Object.keys(current).length ? {} : current);
+  }, [autoFold]);
   const deliverables = useMemo(() => getTurnDeliverables(turn, flow), [turn, flow]);
   const producedMentions = useMemo(
     () => deliverables.length > 0 && props.openFile ? createProducedFileMentions(deliverables, props.openFile) : undefined,
@@ -635,8 +642,8 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
   const metrics = useMemo(() => ({
     usage: tailData?.tokenUsage,
     runMs,
-    tokensPerSecond: tailData?.tokensPerSecond,
-    ttftMs: tailData?.ttftMs,
+    tokensPerSecond: (tailData as { tokensPerSecond?: number } | undefined)?.tokensPerSecond,
+    ttftMs: (tailData as { ttftMs?: number } | undefined)?.ttftMs,
     endedAt: tailData?.closing?.time ?? turn?.end?.time,
   }), [tailData, runMs, turn?.end?.time]);
   const forkSeq = forkAnchorSeq([tailData?.closing?.finalNode]);
@@ -663,7 +670,6 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     forkSeq,
     fileMentions,
     metrics,
-    getToolView: props.getToolView,
   };
   const terminal = terminalLabel(boundary.reason);
   const hasTurnError = flow.some(item => item.kind === 'node' && nodes.get(item.nodeKey)?.kind === 'turn-error');
@@ -938,7 +944,7 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="1.0.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="1.1.0" data-reader-build="1.1.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>

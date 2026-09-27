@@ -319,6 +319,7 @@ export function useReadingScroll(root: RefObject<HTMLElement>, motion: boolean):
         if (bottom) { following.current = true; setDetached(false); }
         return;
       }
+      if (!bottom) { following.current = false; setDetached(true); }
     };
     const onWheel = (event: WheelEvent) => {
       cancelAnimationFrame(followFrame); followFrame = 0; lastWrittenTop = null;

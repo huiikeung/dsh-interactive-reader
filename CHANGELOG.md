@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0
+
+Merged upstream `aa2246740/dsh-better-display` **v0.3.3** into this fork and retargeted
+the peer range to the current Host.
+
+- **DSH 0.1.7-rc.1 / rc.2 compatibility**, upstream's headline work: the rendering
+  bridge reads `turnTail` as the list RC1 declares (the old chain read threw before the
+  reading view mounted), tool rows carry the verified Shimmer treatment, and the
+  context rows resolve `provenance`/`producer` so either host generation renders.
+- `localPathMediaUrl` now also serves the Desktop `dsh-app://app` base, and the
+  markdown image path resolves through the render context as RC2 expects.
+- Peer dependencies moved from `^0.1.6-alpha.2` to `>=0.1.7-rc.1 <0.1.8` (cordis
+  `~4.0.4`), adding the `dsh-client-ui-tool` face.
+- Upstream tooling adopted: `check:harness` with the recorded RC2 baseline
+  (`compat/harness-rc2.json`), `test:official`, `test:auto-fold`, the tool-update slot
+  module, and `platform-media`'s Desktop route.
+- Everything fork-specific is kept: the `dsh-interactive-reader` name and slot seats,
+  the official actions / tail / node / tool mirrors, the folder pane, reveal targets,
+  fork-at, and the RC2 answer-actions bridge.
+
 ## 1.0.0
 
 The official-component bridge is complete: four families, each verified on a session

@@ -1,10 +1,10 @@
-import type { ComponentType } from 'react';
 import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
+import type { ComponentType } from 'react';
 import type { AssistantBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore } from '@deepseek-ai/dsh-client-ui-slots';
-import type { TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { OfficialSeat } from './official-slots.js';
+import type { OpenFileOptions, TurnTailOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { createReaderStore } from './store.js';
 /**
  * Reader-owned seat for the official finalized-assistant actions.
@@ -49,7 +49,7 @@ export interface ReaderInjected {
      */
     fillComposer: (text: string) => boolean;
     /** Open a workspace file or directory; mode comes from the Interactive Reader setting. */
-    openFile: (path: string) => Promise<void> | void;
+    openFile: (path: string, options?: OpenFileOptions) => Promise<void> | void;
     /** Root-scoped Interactive Reader prefs (`dsh.reader.v1`), shared with Settings. */
     openPrefs?: {
         getSnapshot: () => {
@@ -102,7 +102,7 @@ export interface ReaderInjected {
 }
 export type ReaderProps = PropsRuntime<'conversation.view'> & PropsLocale<'chat'> & PropsRenderSlots<'dsh-interactive-reader.block' | OfficialSeat> & PropsStore<ReturnType<typeof createReaderStore>> & ReaderInjected;
 export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader' | 'officialFileMentions'> & {
-    openFile?: (path: string) => Promise<void> | void;
+    openFile?: (path: string, options?: OpenFileOptions) => Promise<void> | void;
     revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
     /** The Host's own view of what it can open natively; shared, memoized probe. */
     probeRevealDesktop?: () => Promise<import('./reveal.js').RevealDesktop>;

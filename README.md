@@ -5,7 +5,7 @@
 推荐用 npm（可钉版本）：
 
 ```sh
-dsh plugin --profile web add dsh-interactive-reader@0.8.0
+dsh plugin --profile web add dsh-interactive-reader@1.1.0
 ```
 
 也可以装 latest：
@@ -44,7 +44,7 @@ PATH 上要有官方 `dsh`（没有就用 `npx @deepseek-ai/dsh`）和 **pnpm**�
 
 最终回答里的 ````mcp-app` 代码块会在阅读视图里挂成交互卡片，跑在 `<iframe sandbox="allow-scripts allow-forms">` 里，没有 `allow-same-origin`。卡片可以通过 JSON-RPC 把下一轮 prompt 填进输入框。技能包在 [`skills/generative-mcpapps/`](skills/generative-mcpapps/)。设置里的 **交互阅读** 可把产物改为右侧栏预览（默认仍用系统应用），打开半透明毛玻璃（默认关），设置过程自动折叠开关（默认开），并检测该技能是否已装进宿主技能目录。
 
-面向 DeepSeek Harness **0.1.6-alpha.2**。只改展示，不改 Agent 执行、SDK 或模型凭据。Node.js `^22.19.0 || >=24`。新会话默认进阅读。
+面向 DeepSeek Harness **0.1.7-rc.2**。只改展示，不改 Agent 执行、SDK 或模型凭据。Node.js `^22.19.0 || >=24`。新会话默认进阅读。
 
 本地目录或 tarball：
 

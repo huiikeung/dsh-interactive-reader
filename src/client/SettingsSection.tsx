@@ -4,7 +4,7 @@ import { Button, Input, Switch, Tag } from '@deepseek-ai/dsh-client-ui-primitive
 import { foldIntensityOf, frostedGlassOf, type FoldIntensity } from './fold-intensity.js';
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
 import { settingsCopyFor, type SettingsCopy, type SettingsCopyKey } from './settings-copy.js';
-import { CONVENTIONAL_SKILL_ROOTS, detectGenerativeMcpappsSkill, shortestInstallCommand, type SkillStatusProbe, type SkillStatusSnapshot } from './skill-status.js';
+import { CONVENTIONAL_SKILL_ROOTS, detectGenerativeMcpappsSkill, routeSkillProbe, shortestInstallCommand, type SkillStatusProbe, type SkillStatusSnapshot } from './skill-status.js';
 import css from './SettingsSection.module.css';
 
 /**
@@ -148,10 +148,13 @@ export function SettingsSection(props: SettingsProps) {
   const [skill, setSkill] = useState<SkillStatusSnapshot | undefined>();
   const [checking, setChecking] = useState(false);
 
+  const checkSkill = props.checkSkill;
   const recheck = useCallback(async () => {
     setChecking(true);
     try {
-      setSkill(await detectGenerativeMcpappsSkill(props.checkSkill));
+      // A section that somehow arrives without the Host probe still asks the plugin's
+      // own route rather than reporting that the Host cannot be queried.
+      setSkill(await detectGenerativeMcpappsSkill(checkSkill ?? routeSkillProbe()));
     } catch {
       setSkill({
         name: 'generative-mcpapps',
@@ -163,7 +166,7 @@ export function SettingsSection(props: SettingsProps) {
     } finally {
       setChecking(false);
     }
-  }, [props.checkSkill]);
+  }, [checkSkill]);
 
   useEffect(() => { void recheck(); }, [recheck]);
 

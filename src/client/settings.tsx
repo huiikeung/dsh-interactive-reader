@@ -4,7 +4,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import type {} from './settings-slots.js';
 import { settingsCopyFor, zh, en } from './settings-copy.js';
 import { SettingsSection, type BetterDisplaySettingsInjected, type OpenPrefs } from './SettingsSection.js';
-import { firstSessionId, skillsFromListResult, type SkillStatusProbe } from './skill-status.js';
+import { composeSkillProbe, firstSessionId, routeSkillProbe, skillsFromListResult, type SkillStatusProbe } from './skill-status.js';
 import type { HostSkillStatus } from '../skill-status.js';
 
 interface LocaleFace {
@@ -60,7 +60,10 @@ export function installBetterDisplaySettings(ctx: Context, prefs: OpenPrefs): vo
   if (locale?.register) {
     ctx.effect(() => locale.register!('interactive-reader', { zh, en }), 'dsh-interactive-reader: settings copy');
   }
-  const checkSkill = createSkillProbe(ctx);
+  // The Context probe can scope the scan to this reading session's project root, so it
+  // is asked first; the plugin's own route is the safety net for the case where that
+  // probe cannot answer at all. See `composeSkillProbe`.
+  const checkSkill = composeSkillProbe(createSkillProbe(ctx), routeSkillProbe());
   const injected = (): BetterDisplaySettingsInjected => ({
     prefs,
     copy: settingsCopyFor(languageTag(ctx)),

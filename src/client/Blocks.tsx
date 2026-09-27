@@ -174,6 +174,11 @@ export function CopyAnswer({ blocks, onFork, metrics, extraActions }: { blocks: 
         <CopyGlyph />
       </button>
     )}
+    {/* Contributions from the official `conversation.chat.assistant-actions` list
+        slot — feedback first, anything else registered there later after it. The
+        Host's own `MessageIconActions` places them right after the copy button and
+        before the branch button, so this is where they go; the row otherwise mirrors
+        that order: copy, official actions, branch, then usage and the clock. */}
     {extraActions}
     {onFork && (
       <button
@@ -193,9 +198,6 @@ export function CopyAnswer({ blocks, onFork, metrics, extraActions }: { blocks: 
     )}
     {metrics && <TurnMetrics usage={metrics.usage} runMs={metrics.runMs} tokensPerSecond={metrics.tokensPerSecond} ttftMs={metrics.ttftMs} />}
     {endedAt !== undefined && <MessageClock time={endedAt} />}
-    {/* Contributions from the official `conversation.chat.assistant-actions` list
-        slot — feedback first, anything else registered there later after it. */}
-    {extraActions}
     <span role="status" className={css.meta}>{receipt}</span>
   </div>;
 }

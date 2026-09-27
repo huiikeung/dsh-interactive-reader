@@ -2,8 +2,9 @@ import { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { DiffHunk, ReadBlockLine, SearchFileGroup } from '@deepseek-ai/dsh-client-ui-primitives';
 import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlock, WebBlock,
-  IconApiOutline14, IconBrowseOutline16, IconEditOutline16, IconSearchOutline16, IconSkillOutline16, IconSparkle16 } from '@deepseek-ai/dsh-client-ui-primitives';
+  IconApiOutlineRegular, IconBrowseOutlineRegular, IconEditOutlineRegular, IconSearchOutlineRegular, IconSkillOutlineRegular, IconSparkleRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Blocks, contentBlocks } from './Blocks.js';
+import { OfficialTool } from './OfficialContent.js';
 import { ProcessFragment } from './motion.js';
 import { activityPhase, activitySummary, callDiffHunks, diffTotals, executionFacts, objectValue, toolIdentity } from './tool-activity.js';
 import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity.js';
@@ -14,7 +15,7 @@ import { diffBlockLabels, jsonTreeLabels, readBlockLabels, searchBlockLabels, te
 import css from './Reader.module.css';
 
 const LABEL: Record<ToolPhase, string> = { preparing: '输入生成中', running: '执行中', returned: '已返回', succeeded: '已完成', failed: '失败', interrupted: '已中断' };
-const ICONS = { write: IconEditOutline16, read: IconBrowseOutline16, terminal: IconApiOutline14, search: IconSearchOutline16, web: IconSearchOutline16, other: IconSparkle16 } satisfies Record<ToolCategory, unknown>;
+const ICONS = { write: IconEditOutlineRegular, read: IconBrowseOutlineRegular, terminal: IconApiOutlineRegular, search: IconSearchOutlineRegular, web: IconSearchOutlineRegular, code: IconApiOutlineRegular, other: IconSparkleRegular } satisfies Record<ToolCategory, unknown>;
 const number = new Intl.NumberFormat('zh-CN');
 const language = (path: string | undefined) => path?.split('.').at(-1);
 const duration = (ms: number) => ms < 1000 ? `${Math.round(ms)} 毫秒` : `${(ms / 1000).toFixed(ms < 10000 ? 1 : 0)} 秒`;
@@ -80,28 +81,14 @@ function searchFiles(value: unknown): SearchFileGroup[] | null {
   return files;
 }
 
-function CustomToolWrapper({ Component, block, toolName, cwd, openFile }: {
-  Component: any;
-  block: any;
-  toolName: string;
-  cwd?: string;
-  openFile?: (path: string) => Promise<void> | void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    // If the component renders a collapsed disclosure row (like DiffCard with role="button" and aria-expanded="false"),
-    // expand it automatically once so details are immediately visible inside ResultView.
-    const row = containerRef.current?.querySelector<HTMLElement>('[role="button"][aria-expanded="false"]');
-    if (row) row.click();
-  }, []);
-  return (
-    <div ref={containerRef} data-reader-tool-custom>
-      <Component block={block} toolName={toolName} cwd={cwd} openFile={openFile} />
-    </div>
-  );
+function ResultView(props: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
+  const { official, entry, model } = props;
+  const fallback = <ResultFallback {...props} />;
+  if (!official || !entry.block || model.name === 'render_ui' || model.name === 'show_widget') return fallback;
+  return <OfficialTool {...props} official={official} block={entry.block} toolName={model.name} cwd={props.cwd ?? model.cwd} fallback={fallback} />;
 }
 
-function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
+function ResultFallback({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
   if ((model.name === 'render_ui' || model.name === 'show_widget') && typeof model.args?.html === 'string') {
     return <McpAppFrame html={model.args.html as string} title={typeof model.args.title === 'string' ? (model.args.title as string) : undefined} fillComposer={render.fillComposer} />;
   }
@@ -113,11 +100,6 @@ function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { ent
   const meta = objectValue(block.meta);
   const text = block.content.filter(item => item.type === 'text').map(item => item.text).join('\n');
   if (phase === 'interrupted') return <><p className={css.toolDetailNote}>工具已取消，未正常完成。输入和原始返回记录仍可查看。</p><InputView model={model} preparing={false} fillComposer={render.fillComposer} /><pre className={css.toolRaw}>{text}</pre></>;
-
-  const CustomToolView = render.getToolView?.(model.name);
-  if (CustomToolView) {
-    return <CustomToolWrapper Component={CustomToolView} block={block} toolName={model.name} cwd={model.cwd} openFile={render.openFile} />;
-  }
 
   if (model.category === 'terminal') {
     const facts = executionFacts(block);
@@ -154,6 +136,19 @@ function ResultView({ entry, model, phase, ...render }: BlockRenderProps & { ent
     {generatedInput(model.content, model.target, false)}
   </>;
   const content: ToolResultNode['content'] = block.content;
+  // A code interpreter's product is its result, not prose. Without this branch
+  // the output fell through to the generic document path below, which emits it
+  // as reader answer text — so a run_code card sat in the transcript outside
+  // every fold, the exact block the reader wanted to be able to close.
+  if (model.category === 'code') {
+    const output = content.filter(item => item.type === 'text').map(item => item.text).join('\n');
+    const facts = executionFacts(block);
+    if (output.trim()) return <div data-reader-tool-code>
+      <TerminalBlock command={model.command ?? model.name} cwd={model.cwd} output={output}
+        exitCode={facts.exitCode} signal={facts.signal} maxLines={18} labels={terminalBlockLabels} />
+    </div>;
+    return <p className={css.toolDetailNote}>代码已执行，没有可展示的输出。</p>;
+  }
   if (content.some(item => item.type === 'text')) return <div className={css.toolDocument}><Blocks {...render} blocks={contentBlocks(content).filter(item => item.kind === 'text')} source="tool" /></div>;
   if (content.length) return <p className={css.toolDetailNote}>图片或扩展内容已在对话中单独展示。</p>;
   return <p className={css.toolDetailNote}>工具没有返回可展示的内容。</p>;
@@ -184,7 +179,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
     return () => document.removeEventListener('selectionchange', track);
   }, []);
   const facts = executionFacts(entry.block);
-  const Icon = model.name === 'skill' ? IconSkillOutline16 : ICONS[model.category];
+  const Icon = model.name === 'skill' ? IconSkillOutlineRegular : ICONS[model.category];
   const block = entry.block;
   const native = block ? toolRowModel(model.name, block) : null;
   const skillName = typeof model.args?.name === 'string' ? model.args.name.split('\n')[0] : model.raw.split('\n')[0];
@@ -265,7 +260,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   && previous.entry.draft === next.entry.draft && previous.entry.step === next.entry.step
   && previous.motion === next.motion && previous.turnClosed === next.turnClosed && previous.depth === next.depth
   && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage && previous.fillComposer === next.fillComposer
-  && previous.getToolView === next.getToolView);
+  && previous.official === next.official && previous.cwd === next.cwd && previous.openFile === next.openFile);
 
 /** Rich media (images, MCP widgets) rendered outside the folded tool ledger. */
 export function ToolMedia({ block, depth = 0, ...render }: BlockRenderProps & { block: ToolCallBlock; depth?: number }) {

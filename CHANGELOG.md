@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.3.3 — 2026-09-24
+
+- Accept Harness `0.1.7-rc.2` (`dsh-v0.1.7-rc.2`, `477b4f420553e8a52c2fbccc464d7561b239c443`). Peer range stays `>=0.1.7-rc.1 <0.1.8`.
+- `conversation.chat.turnTail` stays a list slot. The new `schedule-created` tail entry and `schedule_update` tool view are additional official registrations, mirrored through the existing seats.
+- Developer tool-change context (`tool-addition` / `tool-removal`) uses the official title and count copy instead of a generic injection row.
+- Local Markdown images accept the Desktop file route `dsh-app://app/api/file`.
+
+## 0.3.2 — 2026-09-24
+
+- 补齐 0.1.7-rc.1 官方桥接的运行时契约：工具视图传入 `phase`/`useDisclosure`/`hookContext{callId}`，聊天节点改用 `{turnData, disclosureReset}` 快照 store；修复真实宿主里官方工具视图静默落到 fallback 的问题。
+- 折叠区吸顶车道的绘制缝隙：车道只给自己的框刷实心底色，`.turn` 14px gap、前一 cell 16px padding、status 车道右侧 `--reader-control-width` 保留区三条缝滚动时透出内容；改用同色 `box-shadow` 向上/向右补漆连成连续色带。
+
+## 0.3.1 — 2026-09-24
+
+- Accept Harness `0.1.7-rc.1`. Peer range is `>=0.1.7-rc.1 <0.1.8`.
+- `conversation.chat.turnTail` is a list slot. The old chain expectation threw during client boot and left the page on “Failed to load plugins”.
+- Icon imports use the rc.1 weight names (`IconBrowseOutlineRegular` and the rest). Size stays a prop.
+- Pending confirmation now reads `useSessionStatus` (`pendingInteraction`). The removed `useSessionPendingInteraction` hook threw as soon as the reader painted.
+- Code and terminal labels include the rc.1 toolbar fields (`codeLabel`, wrap, and `noExitCode`).
+
+## 0.3.0 — 2026-09-21
+
+- 修复关闭自动折叠、查看过程详情后，再开启仍无法折叠的问题；重新开启会恢复自动折叠规则，仍保留文本选择保护和之后的手动展开。
+- 在现有阅读布局中接入官方反馈、工具详情、显式产物卡片、命令和未知节点渲染；官方渲染器负责注入、翻译、store 和子插槽。
+- 移除直接调用工具组件及模拟点击展开的逻辑，保留现有摘要、折叠、动效和文件快捷操作。
+- 接入官方文件链接服务，传递工具文件行号，补齐 RC2 本地 Markdown 图片及加载失败降级。
+- 修复滚动跟随拉回底部的问题，统一阅读列轨道和吸顶区域的位置。
+- 代码解释器结果按终端输出展示，上下文行兼容 `provenance` 和 `producer`。
+- 增加可重放的官方组件集成测试、自动折叠交互回归和 Harness 升级兼容检查，依赖对齐 Harness `0.1.5-rc.2`。
+- 设计范围、接口边界和待收敛模块见 `docs/official-rendering-bridge.md`。
+
 ## 0.2.1 — 2026-09-20
 
 ### Fixed

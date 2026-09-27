@@ -14,8 +14,19 @@ the peer range to the current Host.
 - Peer dependencies moved from `^0.1.6-alpha.2` to `>=0.1.7-rc.1 <0.1.8` (cordis
   `~4.0.4`), adding the `dsh-client-ui-tool` face.
 - Upstream tooling adopted: `check:harness` with the recorded RC2 baseline
-  (`compat/harness-rc2.json`), `test:official`, `test:auto-fold`, the tool-update slot
-  module, and `platform-media`'s Desktop route.
+  (`compat/harness-rc2.json`), the tool-update slot module, and `platform-media`'s
+  Desktop route. Upstream's two browser gates (`test:official`, `test:auto-fold`) were
+  dropped with their fixtures: they mount upstream's own `OfficialContent` components
+  and `dsh-better-display.official.*` seats, which this fork replaced with its own
+  `Official*` components and seats. The bridge contract stays covered by
+  `tests/official-slots.test.ts` and `tests/official-actions.test.ts`.
+- The merge had duplicated the official answer actions in a turn's answer row, so a
+  reply showed thumbs-up / thumbs-down / save-to-memory twice: upstream had moved them
+  next to the copy button while this fork still had them at the end, and both
+  insertions survived. They now render once, where the Host's own
+  `MessageIconActions` puts them — copy, official actions, branch, usage and clock —
+  locked by `tests/answer-actions.test.ts`, since the type checker cannot see two
+  identical JSX children.
 - Everything fork-specific is kept: the `dsh-interactive-reader` name and slot seats,
   the official actions / tail / node / tool mirrors, the folder pane, reveal targets,
   fork-at, and the RC2 answer-actions bridge.

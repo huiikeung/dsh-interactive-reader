@@ -30,6 +30,7 @@ declare const FAMILIES: {
     readonly tools: "tool.call.toolview";
     readonly tail: "conversation.chat.turnTail";
     readonly nodes: "conversation.chat.node";
+    readonly images: "conversation.message.images";
 };
 export type OfficialFamily = keyof typeof FAMILIES;
 export declare const OFFICIAL_SEATS: {
@@ -37,6 +38,7 @@ export declare const OFFICIAL_SEATS: {
     readonly tools: "dsh-interactive-reader.official.tools/tool.call.toolview";
     readonly tail: "dsh-interactive-reader.official.tail/conversation.chat.turnTail";
     readonly nodes: "dsh-interactive-reader.official.nodes/conversation.chat.node";
+    readonly images: "dsh-interactive-reader.official.images/conversation.message.images";
 };
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -76,6 +78,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         };
         'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
         'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
+        'dsh-interactive-reader.official.images/conversation.message.images': SlotMap['conversation.message.images'];
     }
 }
 /**

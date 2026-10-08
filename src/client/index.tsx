@@ -210,6 +210,20 @@ export function apply(ctx: Context): void {
             return undefined;
           }
         },
+        officialPreviewFile: path => {
+          const cwd = ctx.sessions?.list?.getSnapshot?.()?.byId[sessionId]?.cwd;
+          const sidebar = (
+            ctx.get?.('sidebarRight')
+            ?? (ctx as unknown as { sidebarRight?: SidebarRightFace }).sidebarRight
+          ) as SidebarRightFace | undefined;
+          if (!sidebar?.openResource) throw new Error('文件预览面板不可用。');
+          sidebar.openResource((officialFileAddressFor ?? fileAddressFor)(sessionId, cwd, path));
+        },
+        officialHost: {
+          getSnapshot: () => ctx.remote.$host,
+          subscribe: listener => ctx.on('connection/reset', listener),
+        },
+
         loadOlder: async () => { await session().loadOlder(); },
         loadImage: async attachment => {
           const receipt = await session().readAttachment(attachment.attachmentId);

@@ -34,6 +34,7 @@ const FAMILIES = {
   tools: 'tool.call.toolview',
   tail: 'conversation.chat.turnTail',
   nodes: 'conversation.chat.node',
+  images: 'conversation.message.images',
 } as const;
 export type OfficialFamily = keyof typeof FAMILIES;
 export const OFFICIAL_SEATS = {
@@ -41,6 +42,7 @@ export const OFFICIAL_SEATS = {
   tools: 'dsh-interactive-reader.official.tools/tool.call.toolview',
   tail: 'dsh-interactive-reader.official.tail/conversation.chat.turnTail',
   nodes: 'dsh-interactive-reader.official.nodes/conversation.chat.node',
+  images: 'dsh-interactive-reader.official.images/conversation.message.images',
 } as const;
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -79,6 +81,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & { kind: 'keyed'; scope: 'session'; owner: OfficialToolOwner };
     'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
     'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
+    'dsh-interactive-reader.official.images/conversation.message.images': SlotMap['conversation.message.images'];
   }
 }
 
@@ -96,6 +99,7 @@ const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
   // is the only thing that can be trusted here.
   tail: { kind: 'list', scope: 'session' },
   nodes: { kind: 'keyed', scope: 'session' },
+  images: { kind: 'list', scope: 'session' },
 };
 
 /**

@@ -1,22 +1,20 @@
 import type {} from '@deepseek-ai/dsh-session-turn-outline/types';
+import type {} from '@deepseek-ai/dsh-agent/types';
 import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
+import type { RevealOutcome } from './reveal.js';
 import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageActions } from './Blocks.js';
-import { OfficialActions } from './OfficialActions.js';
-import { OfficialTail } from './OfficialTail.js';
-import { OfficialNode } from './OfficialNode.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
+import { OfficialActions, OfficialNode, OfficialTail } from './OfficialContent.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
-import { assistantSegments, boundaryOf, forkAnchorSeq, runningIndicator, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
-import { basename, composeFileMentions, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
+import { assistantSegments, boundaryOf, forkAnchorSeq, groupNodes, hasProcessContent, hasVisibleBody, isEarlierNarration, processChoiceKey, processExpanded, terminalLabel } from './projection.js';
+import { basename, createProducedFileMentions, dirname, getTurnDeliverables, showDeliverablesRow } from './deliverables.js';
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
-import { fileManagerName, revealPlanFor, type RevealDesktop, type RevealOutcome } from './reveal.js';
-import { copyToClipboard } from './clipboard.js';
 import { asReadonlyArray, pendingSubmissionImages, type PendingSubmissionEcho } from './pending-submission.js';
 import { WaitingStatus } from './WaitingStatus.js';
 import { handsBackToModel, waitingAnchor } from './waiting-clock.js';
@@ -34,9 +32,31 @@ import type { ReaderGroup, TurnBoundary } from './projection.js';
 import type { BlockRenderProps, ReaderProps } from './types.js';
 import css from './Reader.module.css';
 import { markdownLabels, truncatedJsonLabel } from './primitive-labels.js';
+import { chatSeatProps } from './chat-seat.js';
 
 function isNode<K extends ChatNodeKind>(node: ChatConversationViewNode, kind: K): node is ChatNode<K> {
   return node.kind === kind;
+}
+
+function observedInputIds(order: readonly string[], getNode: (key: string) => ChatConversationViewNode | undefined): Set<string> {
+  const ids = new Set<string>();
+  for (const key of order) {
+    const node = getNode(key);
+    if (!node || (node.kind !== 'user' && node.kind !== 'steering' && node.kind !== 'turn-trigger')) continue;
+    const source = (node.data as { source?: { kind?: string; rpcId?: unknown } }).source;
+    if (source?.kind === 'user' && typeof source.rpcId === 'string') ids.add(source.rpcId);
+  }
+  return ids;
+}
+
+function inboxText(item: { content?: readonly unknown[] }): string {
+  return (item.content ?? []).filter((block): block is { type: 'text'; text: string } => {
+    return typeof block === 'object' && block !== null && (block as { type?: unknown }).type === 'text' && typeof (block as { text?: unknown }).text === 'string';
+  }).map(block => block.text).join('');
+}
+
+function inboxAttachmentCount(item: { content?: readonly unknown[] }): number {
+  return (item.content ?? []).filter(block => typeof block === 'object' && block !== null && (block as { type?: unknown }).type !== 'text').length;
 }
 
 function cleanErrorMessage(raw: string | undefined): string {
@@ -180,13 +200,13 @@ const AssistantNode = memo(function AssistantNode({ useChat, nodeKey, boundary, 
         <Blocks {...render} blocks={part.blocks} streaming={data.status === 'running'} holdFormatting={pinned} startedAt={data.time} interrupted={data.status === 'interrupted'} liveText />
         {last && data.status === 'interrupted' && <span className={css.stopped}>已停止</span>}
         {last && !earlier && !folded && data.status !== 'running' && boundary.status === 'closed' && (
-          <CopyAnswer blocks={body} extraActions={<OfficialActions {...render} messageId={data.finalNode?.messageId} />} onFork={(() => {
+          <CopyAnswer blocks={body} onFork={(() => {
             // The fork anchor must be the durable closing message seq (same as
             // the official turn-tail branch). AssistantChatData carries no seq
             // of its own; passing it would fork the whole session instead.
             const anchor = forkAnchorSeq([data.finalNode, { seq: render.forkSeq }]);
             return render.forkAt && anchor !== undefined ? () => render.forkAt!(anchor) : undefined;
-          })()} metrics={render.metrics} />
+          })()} metrics={render.metrics} extraActions={<OfficialActions official={render.official} messageId={data.finalNode?.messageId} />} />
         )}
       </article>
     </RetiringContent>;
@@ -202,7 +222,7 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
     const otherBlocks = blocks.filter(b => b.kind !== 'image');
     const text = otherBlocks.filter((block): block is Extract<typeof block, { kind: 'text' }> => block.kind === 'text').map(block => block.text).join('\n\n');
     const time = node.data.time;
-    return <div className={css.userCluster} data-reader-anchor data-reader-key={nodeKey}>
+    return <div className={css.userCluster} data-reader-anchor data-reader-key={nodeKey} {...chatSeatProps(node.kind, nodeKey)}>
       {node.kind === 'steering' && <p className={css.meta}>补充消息</p>}
       {imageBlocks.length > 0 && <div className={css.userImages}>
         <Blocks {...render} blocks={imageBlocks} source="user" />
@@ -231,9 +251,7 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   if (isNode(node, 'turn-max-tokens')) return <div className={css.notice}>已到达输出长度限制，回答尚未完整。</div>;
   if (isNode(node, 'model-retry')) return node.data.current.retryState === 'scheduled'
     ? <div className={css.notice} role="status">模型请求未成功，正在等待重试。详情保留在执行过程中。</div> : null;
-  if (isNode(node, 'command')) return <OfficialNode renderSlot={render.renderSlot} node={node}
-    loadImage={render.officialImageLoader} officialFileMentions={render.officialFileMentions}
-    fallback={<JsonBlock label="命令记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />} />;
+  if (isNode(node, 'command') && render.official) return <OfficialNode {...render} node={node} fallback={<JsonBlock label="命令记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />} />;
   if (isNode(node, 'command')) {
     if (node.data.outcome?.kind === 'error') return <div className={css.error} role="alert">
       <svg className={css.errorIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -253,19 +271,11 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
   // host (it appears nowhere in the installed packages), so a slash command arrives
   // as 'command' above and is rendered there. Keeping the branch only made the file
   // look like it handled a case that cannot occur.
-  //
-  // Everything that reaches here is a kind no renderer claims — on a stock Host that is
-  // only `unknown`, the forward-compatibility path. The official renderer presents it
-  // the way the native chat tab does; this fork's own record block stays as the fallback
-  // for a kind nothing claims at all.
-  return <OfficialNode renderSlot={render.renderSlot} node={node}
-    cwd={undefined}
-    openFile={render.openFile} inspectCall={undefined} forkAt={render.forkAt}
-    loadImage={render.officialImageLoader} officialFileMentions={render.officialFileMentions}
-    fallback={<div className={css.unknown} data-reader-anchor>
-      <p>此记录类型暂未接入阅读页：{node.kind}</p>
-      <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
-    </div>} />
+  return <OfficialNode {...render} node={node} fallback={<div className={css.unknown} data-reader-anchor>
+    <p>此记录类型暂未接入阅读页：{node.kind}</p>
+    {render.official && <button type="button" className={css.textButton} onClick={() => render.official!.openView('chat', node.key)}>在对话中查看</button>}
+    <JsonBlock label="查看原始记录" payload={node.data} truncatedLabel={truncatedJsonLabel} />
+  </div>} />;
 });
 
 /**
@@ -286,8 +296,7 @@ function subagentCount(snapshot: { nodes: { get(key: string): ChatConversationVi
   return 0;
 }
 
-function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pick<ReaderProps, 'sessionId' | 'useChat' | 'useSessionStatus'> & { group: ReaderGroup; motion: boolean }) {
-  const pending = useSessionStatus(snapshot => snapshot.get(sessionId)?.pendingInteraction);
+function GroupStatus({ group, sessionId, useChat, pending, motion }: Pick<ReaderProps, 'sessionId' | 'useChat'> & { group: ReaderGroup; motion: boolean; pending: { kind?: string } | undefined }) {
   const text = useChat(snapshot => {
     const turn = group.turn === null ? undefined : snapshot.timeline.turns.get(group.turn);
     if (turn?.status === 'closed') {
@@ -318,24 +327,16 @@ function GroupStatus({ group, sessionId, useChat, useSessionStatus, motion }: Pi
   return <StatusText text={text} motion={motion} shimmer={busy} />;
 }
 
-type ChipStatus = 'idle' | 'opened' | 'copied' | 'revealed' | 'revealCopied' | 'failed';
-
-const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, revealDesktop, revealTemplate, revealPaneAvailable, openMode }: {
+const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFile, openMode }: {
   path: string;
   openFile?: (path: string) => Promise<void> | void;
-  revealFile?: (path: string) => Promise<RevealOutcome>;
-  /** The Host's capability answer; undefined until the shared probe settles. */
-  revealDesktop?: RevealDesktop;
-  /** The configured fnOS file-manager template, if any. */
-  revealTemplate?: string;
-  /** Whether the right-sidebar folder pane can be opened in this shell. */
-  revealPaneAvailable?: boolean;
+  revealFile?: (path: string) => Promise<RevealOutcome> | void;
   openMode: DeliverableOpenMode;
 }) {
-  const [status, setStatus] = useState<ChipStatus>('idle');
+  const [status, setStatus] = useState<'idle' | 'opened' | 'copied' | 'revealed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout>>();
 
-  const flash = (next: ChipStatus) => {
+  const flash = (next: 'opened' | 'copied' | 'revealed') => {
     setStatus(next);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setStatus('idle'), 1600);
@@ -347,53 +348,36 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
       openFile?.(path);
       flash('opened');
     } catch {
-      flash('failed');
+      // fallback
     }
   };
 
   const onReveal = (event: React.MouseEvent) => {
     event.stopPropagation();
-    if (!revealFile) {
-      try {
+    try {
+      if (revealFile) {
+        revealFile(path);
+      } else {
         openFile?.(dirname(path));
-        flash('opened');
-      } catch {
-        flash('failed');
       }
-      return;
+      flash('revealed');
+    } catch {
+      // fallback
     }
-    void (async () => {
-      try {
-        const outcome = await revealFile(path);
-        // 'copied' is a real outcome, not a failure: the Host has no desktop, so the
-        // folder path is what the user can actually act on.
-        flash(outcome === 'external' || outcome === 'fnos' || outcome === 'sidebar'
-          ? 'revealed'
-          : outcome === 'copied' ? 'revealCopied' : 'failed');
-      } catch {
-        flash('failed');
-      }
-    })();
   };
 
   const onCopy = (event: React.MouseEvent) => {
     event.stopPropagation();
-    void (async () => {
-      flash(await copyToClipboard(path) ? 'copied' : 'failed');
-    })();
+    try {
+      void navigator.clipboard?.writeText(path);
+      flash('copied');
+    } catch {
+      // fallback
+    }
   };
 
   const name = basename(path);
   const folder = dirname(path);
-  const plan = useMemo(
-    () => revealPlanFor({ folderPath: folder, template: revealTemplate ?? '', desktop: revealDesktop, paneAvailable: revealPaneAvailable }),
-    [folder, revealTemplate, revealDesktop, revealPaneAvailable],
-  );
-  const revealTitle = status === 'revealCopied'
-    ? `已复制目录路径：${folder}`
-    : status === 'failed'
-      ? `未能打开或复制：${folder}`
-      : plan.label;
 
   return (
     <div className={css.deliverableChip} data-status={status} title={path}>
@@ -423,24 +407,13 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
         <button
           type="button"
           className={css.chipActionBtn}
-          data-reveal={status === 'idle' ? undefined : status}
-          title={revealTitle}
-          aria-label={revealTitle}
+          title={`在访达中定位所在目录 (${folder})`}
+          aria-label="在访达中显示所在目录"
           onClick={onReveal}
         >
           {status === 'revealed' ? (
             <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
               <path d="M3.5 8.5l3 3 6-7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          ) : status === 'revealCopied' ? (
-            <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
-              <rect x="5.5" y="5.5" width="8" height="8" rx="1.5" strokeWidth="1.2" />
-              <path d="M4 10.5H3a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v1" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-          ) : status === 'failed' ? (
-            <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
-              <path d="M8 2.5 14 13H2L8 2.5z" strokeWidth="1.2" strokeLinejoin="round" />
-              <path d="M8 6.5v3M8 11.6h.01" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
           ) : (
             <svg className={css.actionIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
@@ -471,61 +444,22 @@ const DeliverableChip = memo(function DeliverableChip({ path, openFile, revealFi
   );
 });
 
-function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDesktop, fnosFileManagerTemplate, revealPaneAvailable, openMode }: {
+function DeliverablesRow({ deliverables, openFile, revealFile, openMode }: {
   deliverables: readonly string[];
   openFile?: (path: string) => Promise<void> | void;
-  revealFile?: (path: string) => Promise<RevealOutcome>;
-  probeRevealDesktop?: () => Promise<RevealDesktop>;
-  fnosFileManagerTemplate?: () => string;
-  revealPaneAvailable?: boolean;
+  revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome> | void;
   openMode: DeliverableOpenMode;
 }) {
-  const [folderStatus, setFolderStatus] = useState<ChipStatus>('idle');
-  const [desktop, setDesktop] = useState<RevealDesktop>();
-  const template = fnosFileManagerTemplate?.() ?? '';
-
-  // One shared probe per row: the capability is a property of the Host, not the file.
-  useEffect(() => {
-    if (!probeRevealDesktop) return undefined;
-    let live = true;
-    void probeRevealDesktop()
-      .then(next => { if (live) setDesktop(next); })
-      .catch(() => { /* stay with the neutral label */ });
-    return () => { live = false; };
-  }, [probeRevealDesktop]);
-
+  const [folderStatus, setFolderStatus] = useState<'idle' | 'opened'>('idle');
   const onOpenWorkspace = () => {
-    const settle = (next: ChipStatus) => {
-      setFolderStatus(next);
-      window.setTimeout(() => setFolderStatus('idle'), 1600);
-    };
-    if (!revealFile) {
-      try {
-        openFile?.('.');
-        settle('opened');
-      } catch {
-        settle('failed');
-      }
-      return;
+    try {
+      openFile?.('.');
+      setFolderStatus('opened');
+      setTimeout(() => setFolderStatus('idle'), 1600);
+    } catch {
+      // ignore
     }
-    void (async () => {
-      const outcome = await revealFile('.');
-      settle(outcome === 'external' || outcome === 'fnos' || outcome === 'sidebar'
-        ? 'revealed'
-        : outcome === 'copied' ? 'revealCopied' : 'failed');
-    })();
   };
-
-  const workspaceLabel = desktop === undefined
-    ? '在文件夹中显示'
-    : desktop.available
-      ? `在${fileManagerName(desktop.fileManager)}中显示`
-      : '复制工作区路径';
-  const workspaceTitle = desktop === undefined
-    ? '在文件夹中显示整个工作区目录'
-    : desktop.available
-      ? `在${fileManagerName(desktop.fileManager)}中打开整个工作区目录`
-      : `复制工作区目录路径（${desktop.name ?? '宿主'}没有桌面环境）`;
 
   return (
     <div className={css.deliverablesRoot} data-reader-deliverables>
@@ -533,16 +467,7 @@ function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDeskto
       <div className={css.deliverablesLane}>
         <div className={css.deliverablesRow}>
           {deliverables.slice(0, 8).map(path => (
-            <DeliverableChip
-              key={path}
-              path={path}
-              openFile={openFile}
-              revealFile={revealFile}
-              revealDesktop={desktop}
-              revealTemplate={template}
-              revealPaneAvailable={revealPaneAvailable}
-              openMode={openMode}
-            />
+            <DeliverableChip key={path} path={path} openFile={openFile} revealFile={revealFile} openMode={openMode} />
           ))}
           {deliverables.length > 8 && (
             <span className={css.deliverablesMore}>
@@ -555,19 +480,14 @@ function DeliverablesRow({ deliverables, openFile, revealFile, probeRevealDeskto
               className={css.deliverablesShowFolder}
               data-status={folderStatus}
               onClick={onOpenWorkspace}
-              title={workspaceTitle}
-              aria-label={workspaceTitle}
+              title="在访达中打开整个工作区目录"
             >
-              {folderStatus === 'revealed' && (
+              {folderStatus === 'opened' && (
                 <svg className={css.statusIcon} viewBox="0 0 16 16" fill="none" stroke="currentColor">
                   <path d="M3.5 8.5l3 3 6-7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
-              <span>
-                {folderStatus === 'revealed'
-                  ? '已打开'
-                  : folderStatus === 'revealCopied' ? '已复制路径' : folderStatus === 'failed' ? '未能打开' : workspaceLabel}
-              </span>
+              <span>{folderStatus === 'opened' ? '已打开访达' : '在文件夹中显示'}</span>
             </button>
           )}
         </div>
@@ -615,10 +535,6 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     if (autoFold) setFoldOpenByKey(current => Object.keys(current).length ? {} : current);
   }, [autoFold]);
   const deliverables = useMemo(() => getTurnDeliverables(turn, flow), [turn, flow]);
-  const producedMentions = useMemo(
-    () => deliverables.length > 0 && props.openFile ? createProducedFileMentions(deliverables, props.openFile) : undefined,
-    [deliverables, props.openFile],
-  );
   const tailData = useMemo(() => {
     for (const key of group.keys) {
       const n = nodes.get(key);
@@ -626,18 +542,21 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     }
     return undefined;
   }, [group.keys, nodes]);
-  // The Host's own resolver first, ours where it declines: the official one knows the
-  // whole workspace vocabulary, ours covers exactly the paths this turn produced. A
-  // turn with no TurnLocation yet (a turn still assembling) asks for neither.
-  const officialMentions = turn === undefined ? undefined : props.officialFileMentions?.({
-    turn,
-    seq: tailData?.closing?.finalNode?.seq ?? tailData?.seq ?? 0,
-    openFile: path => { void props.openFile?.(path); },
-  });
-  const fileMentions = useMemo(
-    () => composeFileMentions(officialMentions, producedMentions),
-    [officialMentions, producedMentions],
-  );
+  const tailOwner = useMemo(() => turn && tailData ? {
+    turn, seq: tailData.closing?.finalNode.seq ?? tailData.seq, openFile: props.openFile,
+  } : undefined, [turn, tailData, props.openFile]);
+  const fileMentions = useMemo(() => {
+    const official = tailOwner && props.officialFileMentions ? props.officialFileMentions(tailOwner) : undefined;
+    const reader = deliverables.length > 0 ? createProducedFileMentions(deliverables, props.openFile) : undefined;
+    return official || reader ? { resolve: (value: string) => official?.resolve(value) ?? reader?.resolve(value) } : undefined;
+  }, [tailOwner, props.officialFileMentions, deliverables, props.openFile]);
+  const official = useMemo(() => ({
+    renderSlot: props.renderSlot, renderSlotChain: props.renderSlotChain,
+    officialImageLoader: props.officialImageLoader, officialFileMentions: props.officialFileMentions,
+    officialPreviewFile: props.officialPreviewFile,
+    officialHost: props.officialHost, openView: props.openView,
+  }), [props.renderSlot, props.renderSlotChain, props.officialImageLoader, props.officialFileMentions, props.officialPreviewFile, props.officialHost, props.openView]);
+  const cwd = props.useSessions(state => state.byId[props.sessionId]?.cwd);
   const runMs = turn?.start && turn?.end ? Math.max(0, turn.end.time - turn.start.time) : undefined;
   const metrics = useMemo(() => ({
     usage: tailData?.tokenUsage,
@@ -659,17 +578,22 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
   const shared = {
     useChat: useFlowChat,
     renderSlot: props.renderSlot,
+    openView: props.openView,
     renderSlotChain: props.renderSlotChain,
     loadImage: props.loadImage,
     fillComposer: props.fillComposer,
     openFile: props.openFile,
     revealFile: props.revealFile,
-    probeRevealDesktop: props.probeRevealDesktop,
-    revealPaneAvailable: props.revealPaneAvailable?.(),
     forkAt: props.forkAt,
     forkSeq,
     fileMentions,
     metrics,
+    official,
+    officialImageLoader: props.officialImageLoader,
+    officialFileMentions: props.officialFileMentions,
+    officialPreviewFile: props.officialPreviewFile,
+    officialHost: props.officialHost,
+    cwd,
   };
   const terminal = terminalLabel(boundary.reason);
   const hasTurnError = flow.some(item => item.kind === 'node' && nodes.get(item.nodeKey)?.kind === 'turn-error');
@@ -699,7 +623,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     {startsWithUser && <BlockBoundary><MainNode {...shared} useChat={props.useChat} boundary={boundary} nodeKey={group.keys[0]} /></BlockBoundary>}
     {hasProcess && !isAwaitingModel && <StickyLane kind="status" className={css.turnProcessSticky}>
       <Disclosure open={expanded} onChange={setExpanded} controls={flowId} buttonRef={processButton}
-        label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />} />
+        label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} pending={interaction} motion={motion} />} />
     </StickyLane>}
     {boundary.status === 'closed' && hasProcess && autoFold && <ClosedProcessSummary open={expanded} onChange={setExpanded} controls={flowId}
       steps={steps.filter(step => {
@@ -715,15 +639,10 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
       onOpenChange={(key, value) => { pinProcess(); setFoldOpenByKey(current => ({ ...current, [key]: value })); }} renderStep={renderStep} />
     {/* 状态指示永远排在流程之后：AI 的响应永远出现在最新消息（含补充消息）的下方 */}
     {!hasProcess && boundary.status === 'open' && !isAwaitingModel && <div className={css.disclosure} data-reader-status-only>
-      <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} useSessionStatus={props.useSessionStatus} motion={motion} />
+      <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} pending={interaction} motion={motion} />
     </div>}
-    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} probeRevealDesktop={props.probeRevealDesktop} fnosFileManagerTemplate={props.fnosFileManagerTemplate} revealPaneAvailable={props.revealPaneAvailable?.()} openMode={openMode} />}
-    {/* The official tail: file cards for explicit `present` artifacts and the plan
-        review row. Paths our own chip row already shows are filtered out by the
-        mirror, so one turn never shows the same file twice. */}
-    {turn !== undefined && <OfficialTail renderSlot={props.renderSlot} turn={turn}
-      seq={tailData?.closing?.finalNode?.seq ?? tailData?.seq ?? 0} openFile={props.openFile}
-      producedPaths={deliverables} />}
+    {showDeliverablesRow(boundary.status, deliverables) && <DeliverablesRow deliverables={deliverables} openFile={props.openFile} revealFile={props.revealFile} openMode={openMode} />}
+    {boundary.status === 'closed' && <BlockBoundary><OfficialTail official={official} owner={tailOwner} produced={deliverables} /></BlockBoundary>}
     {showTerminalNotice && <div className={css.notice} data-reader-terminal>{terminal}</div>}
   </section>;
 });
@@ -742,6 +661,25 @@ export function Reader(props: ReaderProps) {
   const loadingOlder = props.useSession(snapshot => snapshot.loadingOlder);
   const pendingSubmissions = props.useSession(snapshot => snapshot.pendingSubmissions);
   const pendingList = asReadonlyArray<PendingSubmissionEcho>(pendingSubmissions);
+  const inbox = props.useProjection?.('inbox');
+  type PendingInboxItem = { source?: { kind?: string; rpcId?: unknown }; content?: readonly unknown[] };
+  const inboxSteering = asReadonlyArray<PendingInboxItem>(inbox?.['next-step']).filter(item => item.source?.kind === 'user');
+  const observed = useMemo(() => observedInputIds(order, key => nodes.get(key)), [order, nodes]);
+  const visibleSubmissions = useMemo(() => pendingList.filter(sub => sub.placement !== 'queued' && !observed.has(sub.requestId)), [pendingList, observed]);
+  const pendingInputs = useMemo(() => {
+    const local = new Map<string, PendingSubmissionEcho>(visibleSubmissions.map(sub => [sub.requestId, sub]));
+    const localIds = new Set(pendingList.filter(sub => sub.placement !== 'queued').map(sub => sub.requestId));
+    const rows: Array<PendingSubmissionEcho | (typeof inboxSteering)[number]> = [];
+    for (const item of inboxSteering) {
+      const rpcId = typeof item.source?.rpcId === 'string' ? item.source.rpcId : undefined;
+      if (!rpcId) { rows.push(item); continue; }
+      const submission = local.get(rpcId);
+      if (submission) { local.delete(rpcId); rows.push(submission); }
+      else if (!localIds.has(rpcId)) rows.push(item);
+    }
+    rows.push(...local.values());
+    return rows;
+  }, [inboxSteering, pendingList, visibleSubmissions]);
   const waitAnchor = waitingAnchor(order, key => nodes.get(key), pendingList);
   const motionPreference = props.useStore(state => state.motion);
   const motion = useMotionAllowed(motionPreference);
@@ -757,12 +695,7 @@ export function Reader(props: ReaderProps) {
     const restored = autoFold && !previousAutoFold.current;
     previousAutoFold.current = autoFold;
     // Watch the effective preference so toolbar and Settings changes behave alike.
-    // Reading while folding is off must not pin completed process content forever:
-    // a row opened by hand while folding was off kept its manual expansion, so
-    // turning folding back on left every earlier step stuck open — the summary
-    // still folded, but the expanded rows never re-collapsed. Dropping the manual
-    // expansions on the OFF→ON edge restores the folded reading state while the
-    // selection guard keeps an active selection expanded.
+    // Reading while folding is off must not pin completed process content forever.
     if (restored) props.actions.resetExpanded();
   }, [autoFold, props.actions]);
   const frostedGlass = frostedGlassOf(prefsSnap);
@@ -800,19 +733,6 @@ export function Reader(props: ReaderProps) {
     const turn = lastGroup?.turn === null || lastGroup?.turn === undefined ? undefined : timeline.turns.get(lastGroup.turn);
     return turn?.status !== 'closed';
   }, [running, pendingList, order, nodes, groups, timeline]);
-  // The reader must never be silent while the agent is working; see
-  // `runningIndicator` for why the waiting indicator is the fallback for every
-  // running state whose last turn is not open.
-  const lastStatusGroup = groups.at(-1);
-  const lastStatusTurn = lastStatusGroup === undefined || lastStatusGroup.turn === null
-    ? undefined
-    : timeline.turns.get(lastStatusGroup.turn);
-  const statusMode = runningIndicator({
-    running,
-    awaitingModel: isAwaitingModel,
-    lastTurnStatus: boundaryOf(lastStatusTurn).status,
-  });
-  const showWaitingStatus = statusMode === 'waiting';
   const scroll = useReadingScroll(root, motion);
   const pinnedKeys = usePinnedSelection(root);
   const selectedProcessKeys = usePinnedSelection(root, '[data-reader-process]');
@@ -937,14 +857,9 @@ export function Reader(props: ReaderProps) {
     }
   }, [lastKey, lastNode?.kind, lastSubmissionId, scroll]);
 
-  const visibleSubmissions = useMemo(() => {
-    if (pendingList.length === 0) return [];
-    return pendingList.filter(sub => sub.placement !== 'queued');
-  }, [pendingList]);
-
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
-  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-dsh-interactive-reader="1.1.0" data-reader-build="1.1.0" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
+  return <StreamMotionContext.Provider value={streamMotion}><div ref={root} className={css.root} data-reader-build="0.3.4" data-dsh-better-display="0.3.4" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="">
       <StickyLane kind="toolbar" className={css.toolbar}>
@@ -960,7 +875,6 @@ export function Reader(props: ReaderProps) {
         >
           {`自动折叠${autoFold ? '开' : '关'}`}
         </button>
-        <button type="button" className={css.textButton} aria-pressed={motionPreference} onClick={() => props.actions.setMotion(!motionPreference)} title="新到文字柔和显现，过程平滑展开；关闭后立即完整显示，自动遵循系统减少动态效果设置。">{motionPreference && !motion ? '动效 · 跟随系统关闭' : `动效${motionPreference ? '开' : '关'}`}</button>
       </StickyLane>
       {hasMore && <button type="button" className={css.historyButton} disabled={loadingOlder} onClick={async () => {
         setHistoryError(false);
@@ -970,10 +884,14 @@ export function Reader(props: ReaderProps) {
       {openError && <div className={css.error} role="alert">会话暂时无法读取：{openError.message}</div>}
       {loading && groups.length === 0 && <p className={css.empty} role="status">正在读取会话…</p>}
       {groups.map(group => <TurnGroup key={group.key} {...props} group={group} motion={motion} autoFold={autoFold} pinnedKeys={pinnedKeys} selectedProcessKeys={selectedProcessKeys} isAwaitingModel={isAwaitingModel && group.key === groups.at(-1)?.key} />)}
-      {visibleSubmissions.map(submission => {
-        const images = pendingSubmissionImages(submission);
+      {pendingInputs.map((item, index) => {
+         const submission = 'requestId' in item ? item : undefined;
+         const text = submission?.text ?? inboxText(item as PendingInboxItem);
+         const images = submission ? pendingSubmissionImages(submission) : [];
+         const attachmentCount = images.length;
+        const requestId = submission?.requestId ?? `inbox-${index}`;
         return (
-        <div key={submission.requestId} className={css.userCluster} data-reader-pending-submission>
+        <div key={requestId} className={css.userCluster} data-reader-pending-submission data-pending-steering={submission ? undefined : ''} data-pending-attachment-count={attachmentCount}>
           {images.length > 0 && (
             <div className={css.userImages}>
               {images.map((item, idx) => (
@@ -985,16 +903,16 @@ export function Reader(props: ReaderProps) {
               ))}
             </div>
           )}
-          {submission.text ? (
+          {text ? (
             <div className={css.user}>
-              <div className={css.blocks}>{submission.text}</div>
+              <div className={css.blocks}>{text}</div>
             </div>
           ) : null}
-          <UserMessageActions text={submission.text ?? ''} time={submission.time} />
+          <UserMessageActions text={text} time={submission?.time} />
         </div>
         );
       })}
-      {showWaitingStatus && <WaitingStatus anchor={waitAnchor} label={props.t ? props.t('chat.deepDiving') : '深度求索中...'} />}
+      {isAwaitingModel && <WaitingStatus anchor={waitAnchor} label={props.t ? props.t('chat.deepDiving') : '深度求索中...'} />}
       {pending !== undefined && <div className={css.attention} role="alert" data-reader-attention>
         <strong>{pending.kind === 'question' ? '需要你回答一个问题' : '需要你的确认'}</strong>
         <span>请在下方原生操作区处理。此提示不会收进执行过程。</span>

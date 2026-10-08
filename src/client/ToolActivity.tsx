@@ -4,13 +4,13 @@ import type { DiffHunk, ReadBlockLine, SearchFileGroup } from '@deepseek-ai/dsh-
 import { DiffBlock, DisclosureRow, JsonTree, ReadBlock, SearchBlock, TerminalBlock, WebBlock,
   IconApiOutlineRegular, IconBrowseOutlineRegular, IconEditOutlineRegular, IconSearchOutlineRegular, IconSkillOutlineRegular, IconSparkleRegular } from '@deepseek-ai/dsh-client-ui-primitives';
 import { Blocks, contentBlocks } from './Blocks.js';
+import { OfficialTool } from './OfficialContent.js';
 import { ProcessFragment } from './motion.js';
-import { activityPhase, activitySummary, callDiffHunks, diffTotals, executionFacts, objectValue, toolIdentity } from './tool-activity.js';
+import { activityPhase, activitySummary, callDiffHunks, diffTotals, executionFacts, forgetCallClock, objectValue, runningClockBase, toolIdentity } from './tool-activity.js';
 import type { ToolActivityEntry, ToolCategory, ToolPhase } from './tool-activity.js';
 import type { BlockRenderProps } from './types.js';
 import { classifyTool, toolRowModel, VARIANT_TITLES } from './native/tool-call-model.js';
 import { McpAppFrame, StreamingMcpAppPlaceholder } from './McpAppFrame.js';
-import { OfficialTool } from './OfficialTool.js';
 import { diffBlockLabels, jsonTreeLabels, readBlockLabels, searchBlockLabels, terminalBlockLabels, webBlockLabels } from './primitive-labels.js';
 import css from './Reader.module.css';
 
@@ -59,7 +59,7 @@ function diffHunks(value: unknown): DiffHunk[] | null {
   for (const item of value) {
     const row = objectValue(item);
     if (typeof row?.path !== 'string' || (row.oldText !== null && typeof row.oldText !== 'string') || typeof row.newText !== 'string') return null;
-    diffs.push({ path: row.path as string, oldText: row.oldText as string | null, newText: row.newText as string });
+    diffs.push({ path: row.path, oldText: row.oldText, newText: row.newText });
   }
   return diffs;
 }
@@ -82,14 +82,10 @@ function searchFiles(value: unknown): SearchFileGroup[] | null {
 }
 
 function ResultView(props: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
-  const { entry, model } = props;
+  const { official, entry, model } = props;
   const fallback = <ResultFallback {...props} />;
-  // The official view renders through our mirrored `tool.call.toolview` seat, so the
-  // platform supplies the view's own `PropsRuntime`. Everything this fork presents
-  // itself stays on the hand-rendered path below.
-  if (!entry.block || model.name === 'render_ui' || model.name === 'show_widget') return fallback;
-  return <OfficialTool renderSlot={props.renderSlot} openFile={props.openFile}
-    loadImage={props.officialImageLoader} block={entry.block} toolName={model.name} cwd={model.cwd} fallback={fallback} />;
+  if (!official || !entry.block || model.name === 'render_ui' || model.name === 'show_widget') return fallback;
+  return <OfficialTool {...props} official={official} block={entry.block} toolName={model.name} cwd={props.cwd ?? model.cwd} fallback={fallback} />;
 }
 
 function ResultFallback({ entry, model, phase, ...render }: BlockRenderProps & { entry: ToolActivityEntry; model: ReturnType<typeof activitySummary>; phase: ToolPhase }) {
@@ -198,19 +194,19 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   const showState = phase === 'preparing' || phase === 'running' || phase === 'failed' || phase === 'interrupted';
   const running = phase === 'preparing' || phase === 'running';
   // A step that has not returned yet counts its own seconds, so a long command
-  // reads as progress rather than as a stall. The clock is idle-rendered off the
-  // row's own call time, and disappears the moment the result arrives.
+  // reads as progress rather than as a stall. The clock counts from the call's
+  // stamped start — a session event time, not the moment this view mounted —
+  // so switching conversations and back keeps it running instead of resetting
+  // it to zero, and it disappears the moment the result arrives.
   const [liveMs, setLiveMs] = useState<number | null>(null);
-  const openedAt = useRef<number | null>(null);
   useEffect(() => {
-    if (!running) { openedAt.current = null; setLiveMs(null); return; }
-    const stamped = block && 'kind' in block && block.callTime != null ? block.callTime : null;
-    const base = stamped ?? (openedAt.current ??= Date.now());
+    if (!running) { forgetCallClock(entry.callId); setLiveMs(null); return; }
+    const base = runningClockBase(entry.callId, block);
     const tick = () => setLiveMs(Math.max(0, Date.now() - base));
     tick();
     const timer = setInterval(tick, 200);
     return () => clearInterval(timer);
-  }, [running, block]);
+  }, [running, block, entry.callId]);
   const elapsed = block && 'kind' in block && block.callTime != null ? Math.max(0, block.time - block.callTime) : null;
   // A step that ran long keeps showing how long it took after it returns: the
   // number is the point of the readout. A fast step shows nothing once it is done.
@@ -264,7 +260,7 @@ export const ToolActivity = memo(function ToolActivityView({ entry, motion, turn
   && previous.entry.draft === next.entry.draft && previous.entry.step === next.entry.step
   && previous.motion === next.motion && previous.turnClosed === next.turnClosed && previous.depth === next.depth
   && previous.onRead === next.onRead && previous.renderSlotChain === next.renderSlotChain && previous.loadImage === next.loadImage && previous.fillComposer === next.fillComposer
-  && previous.openFile === next.openFile);
+  && previous.official === next.official && previous.cwd === next.cwd && previous.openFile === next.openFile);
 
 /** Rich media (images, MCP widgets) rendered outside the folded tool ledger. */
 export function ToolMedia({ block, depth = 0, ...render }: BlockRenderProps & { block: ToolCallBlock; depth?: number }) {

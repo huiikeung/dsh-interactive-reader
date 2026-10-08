@@ -51,6 +51,22 @@ export interface ReaderInjected {
   fillComposer: (text: string) => boolean;
   /** Open a workspace file or directory; mode comes from the Interactive Reader setting. */
   openFile: (path: string, options?: OpenFileOptions) => Promise<void> | void;
+  /**
+   * The Host's own prose file-mention resolver for one closing turn, when a provider
+   * is installed (`dsh-client-ui-deliverables` supplies it and the official chat
+   * consumes it the same way). Returns undefined wherever no provider exists.
+   */
+  officialFileMentions: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined;
+  /**
+   * The Host's own session-authorized image loader, exactly as the official chat
+   * supplies it to its tool views and message images. The URL's lifetime is the Host's
+   * business, so no object URL is ever created (or leaked) here.
+   */
+  officialImageLoader: MessageImageLoader;
+  /** Open the Host's native file preview for a path (if the Host supports it). */
+  officialPreviewFile: (path: string) => void;
+  /** The Host's preview panel handle: getSnapshot + subscribe for updates. */
+  officialHost: { getSnapshot: () => { home?: string }; subscribe: (listener: () => void) => () => void };
   /** Root-scoped Interactive Reader prefs (`dsh.reader.v1`), shared with Settings. */
   openPrefs?: {
     getSnapshot: () => {
@@ -85,28 +101,18 @@ export interface ReaderInjected {
   forkAt?: (seq: number) => void;
   /** Load session history through a target sequence number. */
   loadThrough?: (seq: unknown) => Promise<void>;
+  /** Open a custom view registered by the Host or another plugin. */
+  openView?: (view: string, focus?: string) => void;
   /** Resolve a custom tool view registered in the `tool.call.toolview` slot (e.g. diff cards). */
-  getToolView?: (toolName: string) => ComponentType<any> | null;
-  /**
-   * The Host's own prose file-mention resolver for one closing turn, when a provider
-   * is installed (`dsh-client-ui-deliverables` supplies it and the official chat
-   * consumes it the same way). Returns undefined wherever no provider exists, which
-   * is why the reading tab keeps its own produced-path matcher as the fallback.
-   */
-  officialFileMentions?: (owner: TurnTailOwnerProps) => MarkdownFileMentions | undefined;
-  /**
-   * The Host's own session-authorized image loader, exactly as the official chat
-   * supplies it to its tool views and message images. The URL's lifetime is the Host's
-   * business, so no object URL is ever created (or leaked) here.
-   */
-  officialImageLoader?: MessageImageLoader;
+  getToolView?: (toolName: string) => ComponentType<unknown> | null;
 }
 export type ReaderProps = PropsRuntime<'conversation.view'>
   & PropsLocale<'chat'>
   & PropsRenderSlots<'dsh-interactive-reader.block' | OfficialSeat>
   & PropsStore<ReturnType<typeof createReaderStore>>
   & ReaderInjected;
-export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader' | 'officialFileMentions'> & {
+export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'loadImage' | 'fillComposer' | 'getToolView' | 'officialImageLoader' | 'officialFileMentions' | 'officialPreviewFile' | 'officialHost' | 'openView'> & {
+  cwd?: string;
   openFile?: (path: string, options?: OpenFileOptions) => Promise<void> | void;
   revealFile?: (path: string) => Promise<import('./reveal.js').RevealOutcome>;
   /** The Host's own view of what it can open natively; shared, memoized probe. */
@@ -115,6 +121,11 @@ export type BlockRenderProps = Pick<ReaderProps, 'renderSlot' | 'renderSlotChain
   /** Durable closing-message seq of this turn (turn-tail closing), used as the fork anchor. */
   forkSeq?: number;
   fileMentions?: MarkdownFileMentions;
+  /**
+   * Host-provided official renderers (preview file, file mentions, image loader, etc.).
+   * Bundled so every official sub-slot renders identically to the native chat tab.
+   */
+  official?: Pick<ReaderProps, 'renderSlot' | 'renderSlotChain' | 'officialImageLoader' | 'officialFileMentions' | 'officialPreviewFile' | 'officialHost' | 'openView'>;
   metrics?: {
     usage?: NonNullable<import('@deepseek-ai/dsh-client-ui-chat/client').TurnTailChatData['tokenUsage']>;
     runMs?: number;

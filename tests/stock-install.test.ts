@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import semver from 'semver';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
@@ -12,7 +13,30 @@ const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
   exports: Record<string, { default?: string } | string>;
   files: string[];
   dsh: { bundle?: { patch?: string } };
+  peerDependencies: Record<string, string>;
 };
+
+// This fork runs on two Harnesses at once: 0.1.7-rc.2 is the local type baseline
+// (tsconfig paths point at the 0.1.7 types) and 0.2.1-alpha.1 is the runtime the
+// host actually boots. The explicit `0.2.1-alpha.1` comparator is load-bearing:
+// node-semver only matches a prerelease against a comparator with the same
+// major.minor.patch tuple, so `>=0.2.0-rc.1 <0.3.0-0` alone would NOT accept the
+// alpha this fork has to load on.
+const HARNESS_PEER = '>=0.1.7-rc.1 <0.1.8 || >=0.2.0-rc.1 <0.3.0-0 || 0.2.1-alpha.1';
+
+test('DSH peer range covers every Harness this fork supports', () => {
+  const peers = Object.entries(pkg.peerDependencies).filter(([name]) => name.startsWith('@deepseek-ai/dsh-'));
+  assert.ok(peers.length >= 12);
+  for (const [name, range] of peers) {
+    assert.equal(range, HARNESS_PEER, name);
+    assert.equal(semver.satisfies('0.1.7-rc.2', range), true, name);
+    assert.equal(semver.satisfies('0.2.0-rc.2', range), true, name);
+    assert.equal(semver.satisfies('0.2.1-alpha.1', range), true, name);
+    assert.equal(semver.satisfies('0.2.1', range), true, name);
+    assert.equal(semver.satisfies('0.1.6', range), false, name);
+    assert.equal(semver.satisfies('0.3.0', range), false, name);
+  }
+});
 
 test('declares dsh.bundle.patch so official add joins the profile layer stack', () => {
   assert.equal(pkg.dsh.bundle?.patch, './cordis.patch.yml');

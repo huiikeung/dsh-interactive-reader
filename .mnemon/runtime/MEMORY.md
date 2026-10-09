@@ -1,7 +1,0 @@
-DSH 插件类型坑：`import type {} from '@deepseek-ai/dsh-client-*'` 会在解析前被擦除，Host 包贡献的 slot augmentation（SessionStandardProps 的 useSession/sessionId/useChat 等）因此不进入 program，PropsRuntime 只剩一半。要用 `import type * as X from '...'` 并在类型里引用 `typeof X`。
-§
-dsh-better-display 在本机以 `link:` 方式装进 web profile（profiles/web/node_modules/dsh-better-display → 工作区符号链接），所以 `npm run build` 产出 lib/client.js 后无需重装插件。
-§
-dsh-better-display 构建依赖（2026-09-10 更新）：旧流程需 DSH_HARNESS 指向 staging 树 + /tmp/dsh-build-deps 工具链，但 /tmp 已被服务器清理，staging 树丢失。fork 合并后新流程需 DSHX_HARNESS 指向完整 Harness checkout（含 tools/dshx/src/client-build.js adapter）。两条路都不可用时：源码层 tsc --noEmit 与 63 个单测均可通过 node_modules/.bin 直接运行（npm install --cache /tmp/npmcache 可重建 devDeps），仅 tsdown 打包受阻。
-§
-dsh-better-display 已于 2026-09-10 合并 aa2246740 fork（合并提交 10453b8，双亲 ab11aad+6f18398）：新增 MCP Apps SEP-1865（McpAppFrame/mcp-app.ts）、TimelineRail（替代旧 TurnRail）、TurnMetrics、deliverables 产出文件行、原生文件 reveal 路由、DSH 0.1.2 RC1 支持、skills/generative-mcpapps 技能包。冲突解决原则：结构文件取 fork，本地增强保留（TurnMetrics inline types+popover、deliverables 可选链守卫、namespace type imports 防止 slot augmentation 被擦除）。

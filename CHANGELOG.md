@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.1.1
+
+Fixes the fork not loading at all on the current Host, and ports the companions that
+the upstream v0.3.4–v0.3.7 merge had left behind.
+
+- **The plugin now loads on dsh 0.2.x.** Every DSH peer was pinned to
+  `>=0.1.7-rc.1 <0.1.8` while the runtime is `0.2.1-alpha.1`, so the host skipped the
+  whole bundle at startup (`skipping profile bundle "dsh-interactive-reader"`): no host
+  route, no client bundle, and the settings Re-check button did nothing. Each peer now
+  reads `>=0.1.7-rc.1 <0.1.8 || >=0.2.0-rc.1 <0.3.0-0 || 0.2.1-alpha.1`. The explicit
+  alpha comparator is load-bearing — node-semver only matches a prerelease against a
+  comparator with the same major.minor.patch tuple — and is locked by a new
+  `tests/stock-install.test.ts` assertion, as is the fork's two-Harness range (the
+  0.1.7-rc.2 type baseline plus the 0.2.1-alpha.1 runtime).
+- Upstream companions ported for the fixes that were already merged:
+  `tests/tool-clock.test.ts` (the v0.3.6 regression test for the tool elapsed clock
+  counting across remounts), the v0.3.5 plain-css plugin in
+  `scripts/build-motion-fixture.mjs` (rolldown no longer bundles `.css`), and
+  v0.3.4's `dsh-api-workspace-controller/default-workspace` entry in the
+  `tools/client-build.js` INLINE_SAFE regex, which now matches upstream byte for byte.
+- `semver` added as a devDependency for the peer-range assertion.
+
+`compat/harness-rc2.json` remains on the 0.1.7-rc.2 baseline: recomputing it needs a
+DSH 0.2.x source checkout.
+
 ## 1.1.0
 
 Merged upstream `aa2246740/dsh-better-display` **v0.3.3** into this fork and retargeted

@@ -106,9 +106,14 @@ const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
  * Node kinds this reader already presents itself. Everything else reaches the official
  * renderer through the nodes seat, which is what makes a node kind this fork has never
  * heard of render natively instead of as a raw record.
+ *
+ * 'user' and 'steering' are deliberately NOT owned: third-party renderers registered
+ * on the official node slot (e.g. message-recall buttons) must keep working inside the
+ * Reader, so those entries are mirrored and the Reader's own markup rides along as the
+ * seat's fallback (see MainNode in Reader.tsx).
  */
-export const READER_NODES: ReadonlySet<string> = new Set([
-  'user', 'steering', 'assistant-step', 'tool-call', 'turn-tail', 'turn-process',
+export const READER_OWNED_NODES: ReadonlySet<string> = new Set([
+  'assistant-step', 'tool-call', 'turn-tail', 'turn-process',
   'command', 'manual-compaction', 'compaction', 'context', 'system-prompt',
   'turn-error', 'turn-max-tokens', 'model-retry',
 ]);
@@ -276,7 +281,7 @@ export function installOfficialSlots(ctx: Context): () => void {
         // crashed on `useSessions`. Node kinds: mirror only the ones this reader does
         // not present itself, or the same node would render twice.
         return mirrorOfficialSlot(slots, source, officialSeat(family), `dsh-interactive-reader.official.${family}`,
-          family === 'nodes' ? entry => !READER_NODES.has(entry.options.key ?? '') : undefined);
+          family === 'nodes' ? entry => !READER_OWNED_NODES.has(entry.options.key ?? '') : undefined);
       }));
     } catch (error) {
       console.warn(`[dsh-interactive-reader] could not lend the official ${family} slot a seat`, error);

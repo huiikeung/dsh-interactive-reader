@@ -85,8 +85,13 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
  * Node kinds this reader already presents itself. Everything else reaches the official
  * renderer through the nodes seat, which is what makes a node kind this fork has never
  * heard of render natively instead of as a raw record.
+ *
+ * 'user' and 'steering' are deliberately NOT owned: third-party renderers registered
+ * on the official node slot (e.g. message-recall buttons) must keep working inside the
+ * Reader, so those entries are mirrored and the Reader's own markup rides along as the
+ * seat's fallback (see MainNode in Reader.tsx).
  */
-export declare const READER_NODES: ReadonlySet<string>;
+export declare const READER_OWNED_NODES: ReadonlySet<string>;
 /** The documented, type-erased registry inspection/registration boundary. */
 export interface CompositionRegistry {
     spec(key: string): SlotSpec<SlotEntryDef> | undefined;

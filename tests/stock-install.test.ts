@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { test } from 'node:test';
@@ -69,6 +70,17 @@ test('commits compiled lib entries and does not require a prepare script', () =>
   assert.doesNotMatch(clientJs, /只折叠过程/);
   assert.match(clientJs, /\.dsh\/skills/);
   assert.doesNotMatch(clientJs, /submission\.images\.length/);
+});
+
+test('compiled host entry loads in Node without a TypeScript loader', () => {
+  // The 0.3.7 regression class: a relative `./x.ts` specifier that survives
+  // bundling makes the host die with ERR_MODULE_NOT_FOUND on every start while
+  // the market still reports the plugin as installed. Importing the committed
+  // artifact the way the host does catches it here instead.
+  const result = spawnSync(process.execPath, ['--input-type=module', '--eval',
+    "const plugin = await import('./lib/dsh-interactive-reader.js'); if (plugin.name !== 'dsh-interactive-reader' || typeof plugin.apply !== 'function') process.exit(1);",
+  ], { cwd: root, encoding: 'utf8' });
+  assert.equal(result.status, 0, result.stderr || String(result.error ?? 'host entry did not load'));
 });
 
 test('README leads with the official stock one-liner and names pnpm', () => {

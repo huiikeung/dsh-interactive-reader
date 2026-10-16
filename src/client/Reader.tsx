@@ -1,14 +1,16 @@
 import type {} from '@deepseek-ai/dsh-session-turn-outline/types';
 import type {} from '@deepseek-ai/dsh-agent/types';
-import { Fragment, memo, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { Fragment, memo, useCallback, useEffect, useId, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactNode, RefObject } from 'react';
-import type { ChatConversationViewNode, ChatNode, ChatNodeKind } from '@deepseek-ai/dsh-client-ui-chat/client';
+import type { ChatConversationViewNode, ChatNode, ChatNodeKind, ChatNodeOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 import { JsonBlock, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { RevealOutcome } from './reveal.js';
 import { BlockBoundary, Blocks, contentBlocks, CopyAnswer, UserMessageActions } from './Blocks.js';
 import { ReasoningCard } from './ReasoningCard.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { OfficialActions, OfficialNode, OfficialTail } from './OfficialContent.js';
+import { OFFICIAL_SEATS } from './official-slots.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringContent, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
@@ -33,6 +35,7 @@ import type { BlockRenderProps, ReaderProps } from './types.js';
 import css from './Reader.module.css';
 import { markdownLabels, truncatedJsonLabel } from './primitive-labels.js';
 import { chatSeatProps } from './chat-seat.js';
+import { ensureStyles } from './styles.js';
 
 function isNode<K extends ChatNodeKind>(node: ChatConversationViewNode, kind: K): node is ChatNode<K> {
   return node.kind === kind;
@@ -75,7 +78,7 @@ function cleanErrorMessage(raw: string | undefined): string {
   return str;
 }
 
-type SeatProps = BlockRenderProps & Pick<ReaderProps, 'useChat'> & {
+type SeatProps = BlockRenderProps & Pick<ReaderProps, 'useChat' | 'sessionId'> & {
   nodeKey: string; boundary: TurnBoundary; pinned?: boolean; processOpen?: boolean;
 };
 
@@ -215,6 +218,7 @@ const AssistantNode = memo(function AssistantNode({ useChat, nodeKey, boundary, 
 
 const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, processOpen = false, ...render }: SeatProps) {
   const node = useChat(snapshot => snapshot.nodes.get(nodeKey));
+  const [disclosureReset] = useState(() => createSnapshotStore(0));
   if (!node || node.visibility === 'hidden') return null;
   if (isNode(node, 'user') || isNode(node, 'steering')) {
     const blocks = contentBlocks(node.data.content);
@@ -222,7 +226,10 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
     const otherBlocks = blocks.filter(b => b.kind !== 'image');
     const text = otherBlocks.filter((block): block is Extract<typeof block, { kind: 'text' }> => block.kind === 'text').map(block => block.text).join('\n\n');
     const time = node.data.time;
-    return <div className={css.userCluster} data-reader-anchor data-reader-key={nodeKey} {...chatSeatProps(node.kind, nodeKey)}>
+    // The Reader's own markup is the fallback: official user/steering entries
+    // (message-recall buttons and friends) render when registered, and this
+    // presentation stands in wherever the Host has nothing to contribute.
+    const fallback = <>
       {node.kind === 'steering' && <p className={css.meta}>补充消息</p>}
       {imageBlocks.length > 0 && <div className={css.userImages}>
         <Blocks {...render} blocks={imageBlocks} source="user" />
@@ -231,7 +238,30 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
         <Blocks {...render} blocks={otherBlocks} source="user" />
       </div>}
       <UserMessageActions text={text} time={time} />
-    </div>;
+    </>;
+    const official = render.official;
+    let rendered: ReactNode = fallback;
+    if (official) {
+      const turn = node.location.kind === 'turn' || node.location.kind === 'step' ? node.location.turn : undefined;
+      const owner: ChatNodeOwnerProps & Pick<ReaderProps, 'sessionId'> = {
+        cwd: render.cwd,
+        openFile: render.openFile ?? (() => {}),
+        openSkill: () => {},
+        forkAt: render.forkAt ?? (() => {}),
+        inspectCall: callId => official.openView('trajectory', callId),
+        loadImage: official.officialImageLoader,
+        renderMessageImages: images => official.renderSlot(OFFICIAL_SEATS.images, {
+          ...images, loadImage: official.officialImageLoader,
+        }),
+        fileMentions: official.officialFileMentions,
+        sessionId: render.sessionId,
+      };
+      const options = { hookContext: { turnData: turn?.data, disclosureReset }, fallback };
+      rendered = node.kind === 'user'
+        ? official.renderSlot(OFFICIAL_SEATS.nodes, { ...owner, node }, { ...options, entryKey: 'user' })
+        : official.renderSlot(OFFICIAL_SEATS.nodes, { ...owner, node }, { ...options, entryKey: 'steering' });
+    }
+    return <div className={css.userCluster} data-reader-anchor data-reader-key={nodeKey} {...chatSeatProps(node.kind, nodeKey)}>{rendered}</div>;
   }
   if (isNode(node, 'assistant-step')) return null;
   if (isNode(node, 'tool-call')) return <ToolMedia {...render} block={node.data.root} />;
@@ -593,6 +623,7 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
     officialFileMentions: props.officialFileMentions,
     officialPreviewFile: props.officialPreviewFile,
     officialHost: props.officialHost,
+    sessionId: props.sessionId,
     cwd,
   };
   const terminal = terminalLabel(boundary.reason);
@@ -604,6 +635,11 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
   const stoppedWithoutAnswer = (boundary.reason === 'interrupted' || boundary.reason === 'aborted') && !hasAnswerProse;
   const showTerminalNotice = terminal && !hasTurnError
     && (stoppedWithoutAnswer || (boundary.reason !== 'interrupted' && boundary.reason !== 'aborted'));
+  // The pinned lanes share one sticky region so the flow body cannot slide
+  // between them: without the wrapper each lane pinned to the scrollport on
+  // its own and the region below jumped when a lane appeared or retired.
+  const showStatusLane = hasProcess && !isAwaitingModel;
+  const showClosedSummary = boundary.status === 'closed' && hasProcess && autoFold;
   const renderStep = (step: LiveStep, folded: boolean) => {
     const processOpen = folded || expanded;
     if (step.kind === 'reasoning' || step.kind === 'body') return <BlockBoundary>
@@ -621,22 +657,26 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
   };
   return <section className={css.turn} data-reader-turn={group.turn ?? 'unresolved'} data-reader-turn-state={boundary.status} data-reader-turn-result={boundary.reason ?? undefined}>
     {startsWithUser && <BlockBoundary><MainNode {...shared} useChat={props.useChat} boundary={boundary} nodeKey={group.keys[0]} /></BlockBoundary>}
-    {hasProcess && !isAwaitingModel && <StickyLane kind="status" className={css.turnProcessSticky}>
-      <Disclosure open={expanded} onChange={setExpanded} controls={flowId} buttonRef={processButton}
-        label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} pending={interaction} motion={motion} />} />
-    </StickyLane>}
-    {boundary.status === 'closed' && hasProcess && autoFold && <ClosedProcessSummary open={expanded} onChange={setExpanded} controls={flowId}
-      steps={steps.filter(step => {
-        if (step.kind === 'user') return false;
-        if (step.kind !== 'body') return true;
-        const node = nodes.get(step.nodeKey);
-        return !!node && isNode(node, 'assistant-step') && (isEarlierNarration(node.data, boundary)
-          || node.data.blocks.some(block => block.kind === 'tool-call')
-          || (boundary.latestStep > 0 && node.data.step < boundary.latestStep));
-      })} />}
-    <ChoreographedFlow id={flowId} frame={presentation} motion={motion} enabled={autoFold && boundary.status === 'open' && !holdingSelection}
-      urgent={hasTurnError || interaction !== undefined || !sessionRunning} open={foldOpenByKey} processOpen={expanded}
-      onOpenChange={(key, value) => { pinProcess(); setFoldOpenByKey(current => ({ ...current, [key]: value })); }} renderStep={renderStep} />
+    <div className={css.turnStickyRegion} data-reader-sticky-region>
+      {(showStatusLane || showClosedSummary) && <div className={css.turnStickyLanes}>
+        {showStatusLane && <StickyLane kind="status" className={css.turnProcessSticky}>
+          <Disclosure open={expanded} onChange={setExpanded} controls={flowId} buttonRef={processButton}
+            label={<GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} pending={interaction} motion={motion} />} />
+        </StickyLane>}
+        {showClosedSummary && <ClosedProcessSummary open={expanded} onChange={setExpanded} controls={flowId}
+          steps={steps.filter(step => {
+            if (step.kind === 'user') return false;
+            if (step.kind !== 'body') return true;
+            const node = nodes.get(step.nodeKey);
+            return !!node && isNode(node, 'assistant-step') && (isEarlierNarration(node.data, boundary)
+              || node.data.blocks.some(block => block.kind === 'tool-call')
+              || (boundary.latestStep > 0 && node.data.step < boundary.latestStep));
+          })} />}
+      </div>}
+      <ChoreographedFlow id={flowId} frame={presentation} motion={motion} enabled={autoFold && boundary.status === 'open' && !holdingSelection}
+        urgent={hasTurnError || interaction !== undefined || !sessionRunning} open={foldOpenByKey} processOpen={expanded}
+        onOpenChange={(key, value) => { pinProcess(); setFoldOpenByKey(current => ({ ...current, [key]: value })); }} renderStep={renderStep} />
+    </div>
     {/* 状态指示永远排在流程之后：AI 的响应永远出现在最新消息（含补充消息）的下方 */}
     {!hasProcess && boundary.status === 'open' && !isAwaitingModel && <div className={css.disclosure} data-reader-status-only>
       <GroupStatus group={group} sessionId={props.sessionId} useChat={props.useChat} pending={interaction} motion={motion} />
@@ -648,6 +688,9 @@ const TurnGroup = memo(function TurnGroup({ group, motion, autoFold, pinnedKeys,
 });
 
 export function Reader(props: ReaderProps) {
+  // Restore any plugin CSS the Host cleaned up before the first paint: an
+  // insertion effect runs before layout, so the Reader never shows unstyled.
+  useInsertionEffect(() => { ensureStyles(); }, []);
   const root = useRef<HTMLDivElement>(null);
   const activatedAt = useRef(Date.now());
   const order = props.useChat(snapshot => snapshot.order);

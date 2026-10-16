@@ -16,6 +16,8 @@ import { installOfficialSlots, officialChildren, type CompositionRegistry } from
 import { installBetterDisplaySettings } from './settings.js';
 import { fillComposerDom } from './mcp-app.js';
 import { fileAddressFor, isFolderOpenPath, modeFromSnapshot, openDeliverableFile } from './open-file.js';
+import { isAbsoluteWorkspacePath } from '../workspace-path.js';
+import { ensureStyles } from './styles.js';
 import { copyToClipboard } from './clipboard.js';
 import { folderAddressOf, installFolderPane } from './folder-pane.js';
 import {
@@ -160,6 +162,10 @@ export { McpAppFrame } from './McpAppFrame.js';
 export const name = 'dsh-interactive-reader-client';
 export const inject = ['slots', 'sessions', 'conversation', 'uiConversation', 'remote', 'remote.session', 'remote.workspaceFiles'];
 
+// All CSS imports have injected their nodes before this module's body runs.
+// Retain them here so a Host cleanup cannot strip the Reader's styles.
+ensureStyles();
+
 export function apply(ctx: Context): void {
   const store = createReaderStore();
   // Settings-nav glyph. `settings.section` has no icon field, so without this the
@@ -260,6 +266,13 @@ export function apply(ctx: Context): void {
             const targetPath = resolveWorkspacePath(cwd, path);
             const folderTarget = isFolderOpenPath(path);
             const folder = folderTarget ? targetPath : revealFolderOf(targetPath);
+            // A relative folder would make the Host open its own working directory
+            // (or nothing) and report success. Refuse it loudly instead — the same
+            // guard upstream added for its reveal route.
+            if (!isAbsoluteWorkspacePath(folder)) {
+              console.warn('[dsh-interactive-reader] reveal refused: folder is not absolute:', folder);
+              return 'failed';
+            }
             const template = fnosTemplateOf(prefs);
             const paneAvailable = typeof sidebarRightOf(ctx)?.openResource === 'function';
 

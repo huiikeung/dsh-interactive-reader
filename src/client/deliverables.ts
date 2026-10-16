@@ -23,6 +23,9 @@ export function basename(path: string): string {
 export function dirname(path: string): string {
   const normalized = path.replace(/[/\\]+$/, '');
   const at = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+  // A root path ('/' or 'C:\') is its own parent: slicing at 0 would return ''
+  // and a drive root at 2 would drop the drive letter.
+  if (at === 0 || (at === 2 && /^[A-Za-z]:/.test(normalized))) return normalized.slice(0, at + 1);
   return at === -1 ? '.' : normalized.slice(0, at) || '.';
 }
 

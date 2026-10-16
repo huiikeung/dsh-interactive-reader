@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.2.0
+
+Merged upstream `aa2246740/dsh-better-display` **v0.3.8** (the v0.3.6 release the
+user pointed at had already landed in 1.1.1; v0.3.7 was merged earlier and v0.3.8
+is what actually followed it).
+
+- **Official user/steering node renderers now work inside the Reader** (upstream
+  PR #56). `user` and `steering` left the Reader-owned node set, so third-party
+  entries registered on the official node slot — message-recall buttons and
+  friends — are mirrored into the reading view instead of being silently
+  dropped. The Reader's own bubble markup rides along as the seat's fallback, so
+  a Host with nothing registered renders exactly as before.
+- **Streamed terminal command preview** (upstream PR #57). A tool call whose
+  arguments are still streaming now shows a running terminal preview with a
+  "正在生成命令" pill instead of an empty field list, a preparing call reads as
+  `preparing` rather than `running`, and a terminal draft with no recognizable
+  command yet says so plainly.
+- **Plugin CSS survives Host cleanup** (upstream PR #60). The Host can strip
+  plugin-injected style tags; `ensureStyles()` now retains every injected sheet
+  and restores it in an insertion effect before the Reader's first paint.
+- **Retiring-content animations are bounded by a deadline** (upstream PR #60).
+  An animation the browser never finishes (hidden tab, paused compositor) no
+  longer pins the retired row's height open forever.
+- **Sticky lanes share one region** (upstream PR #57). The status lane and the
+  closed-process summary pin inside a single `turnStickyRegion`, so the flow
+  body no longer jumps when a lane appears or retires, and the official
+  code-block banner is scoped into its own stacking context.
+- **Glass mode frosting narrowed to the controls** (upstream PR #43). Chromium
+  keeps the blur on the pills only instead of full-width slabs; the CSS build
+  emits the standard `backdrop-filter` for Chromium and the prefixed one for
+  older Safari via explicit lightningcss targets.
+- **Reveal refuses a relative folder**. The same guard upstream added for its
+  reveal route: a non-absolute folder would make the Host open its own working
+  directory and report success, so the fork now warns and reports failure.
+  `dirname` also stops dropping the drive letter on `C:\` roots, and
+  `isAbsoluteWorkspacePath` moved to a shared `src/workspace-path.ts`.
+- **Build-time guard against the 0.3.7 regression class** (upstream PR #61).
+  A new plugin asserts the host bundle ships no relative `./x.ts` specifier —
+  the shape that made upstream's host die with ERR_MODULE_NOT_FOUND on every
+  start while the market still reported it installed. This fork's host bundle
+  was clean; the assertion is what keeps it that way, and a new test imports
+  the committed host entry in bare Node to prove it loads.
+- Tests ported with the features: `styles`, `retiring-content`,
+  `terminal-input-preview`, `reader-glass-css`, the footer-precedence lane and
+  code-block assertions, and the host-entry load check. **245 tests pass.**
+
+Deliberately NOT ported: upstream's host-side exact-reveal route
+(`src/reveal.ts`, `POST /better-display/reveal`). This fork's reveal chain —
+fnOS template, Host desktop probe, remote opener, clipboard fallback — is a
+design decision for a headless NAS, where spawning `xdg-open` silently does
+nothing; only its path-resolution guard was taken.
+
 ## 1.1.1
 
 Fixes the fork not loading at all on the current Host, and ports the companions that

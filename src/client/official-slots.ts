@@ -111,12 +111,30 @@ const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
  * on the official node slot (e.g. message-recall buttons) must keep working inside the
  * Reader, so those entries are mirrored and the Reader's own markup rides along as the
  * seat's fallback (see MainNode in Reader.tsx).
+ * 'assistant-step' is special: the official renderer is priority 0 and Reader keeps
+ * that presentation. A strictly lower priority is a keyed-slot replacement (lowest
+ * priority renders) and is mirrored for body content.
  */
 export const READER_OWNED_NODES: ReadonlySet<string> = new Set([
-  'assistant-step', 'tool-call', 'turn-tail', 'turn-process',
+  'tool-call', 'turn-tail', 'turn-process',
   'command', 'manual-compaction', 'compaction', 'context', 'system-prompt',
   'turn-error', 'turn-max-tokens', 'model-retry',
 ]);
+
+/** Official `AssistantNodeView` registers at priority 0. Lower wins. */
+export const OFFICIAL_ASSISTANT_PRIORITY = 0;
+
+/**
+ * Mirror a chat-node registration into the Reader seat.
+ * Assistant replacements are the entries that would actually replace the
+ * official renderer on the host. The official priority itself stays out, so
+ * Reader keeps its own answer markdown until a plugin opts in.
+ */
+export function acceptMirroredChatNode(entry: StoredEntry): boolean {
+  const key = entry.options.key ?? '';
+  if (key === 'assistant-step') return (entry.options.priority ?? OFFICIAL_ASSISTANT_PRIORITY) < OFFICIAL_ASSISTANT_PRIORITY;
+  return !READER_OWNED_NODES.has(key);
+}
 
 /** The documented, type-erased registry inspection/registration boundary. */
 export interface CompositionRegistry {
@@ -281,7 +299,7 @@ export function installOfficialSlots(ctx: Context): () => void {
         // crashed on `useSessions`. Node kinds: mirror only the ones this reader does
         // not present itself, or the same node would render twice.
         return mirrorOfficialSlot(slots, source, officialSeat(family), `dsh-interactive-reader.official.${family}`,
-          family === 'nodes' ? entry => !READER_OWNED_NODES.has(entry.options.key ?? '') : undefined);
+          family === 'nodes' ? acceptMirroredChatNode : undefined);
       }));
     } catch (error) {
       console.warn(`[dsh-interactive-reader] could not lend the official ${family} slot a seat`, error);

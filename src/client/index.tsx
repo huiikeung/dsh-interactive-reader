@@ -13,6 +13,7 @@ import { navGlyph, pinNavGlyph } from './nav-glyph.js';
 import { createReaderStore } from './store.js';
 import { installReaderEntry } from './entry.js';
 import { installOfficialSlots, officialChildren, type CompositionRegistry } from './official-slots.js';
+import { TEXT_TRANSFORM_SERVICE, createTextTransformRegistry, installTextTransformRegistry } from './text-transform.js';
 import { installBetterDisplaySettings } from './settings.js';
 import { fillComposerDom } from './mcp-app.js';
 import { fileAddressFor, isFolderOpenPath, modeFromSnapshot, openDeliverableFile } from './open-file.js';
@@ -157,8 +158,10 @@ function openFolderPane(ctx: Context, folder: string): boolean {
   }
 }
 
-export type { ReaderBlockOwner } from './types.js';
+export type { ReaderBlockOwner, ReaderBlockPresentation } from './types.js';
+export type { DisplayCursor, DisplayText, DisplayTextKind, DisplayTextRequest, DisplayTextTransformer, TextTransformRegistry } from './text-transform.js';
 export { McpAppFrame } from './McpAppFrame.js';
+export { TEXT_TRANSFORM_SERVICE, createTextTransformRegistry, originalAnswerText } from './text-transform.js';
 export const name = 'dsh-interactive-reader-client';
 export const inject = ['slots', 'sessions', 'conversation', 'uiConversation', 'remote', 'remote.session', 'remote.workspaceFiles'];
 
@@ -167,6 +170,10 @@ export const inject = ['slots', 'sessions', 'conversation', 'uiConversation', 'r
 ensureStyles();
 
 export function apply(ctx: Context): void {
+  const textTransform = createTextTransformRegistry();
+  const restoreTextTransform = installTextTransformRegistry(textTransform);
+  ctx.provide(TEXT_TRANSFORM_SERVICE, textTransform);
+  ctx.effect(() => restoreTextTransform);
   const store = createReaderStore();
   // Settings-nav glyph. `settings.section` has no icon field, so without this the
   // section renders the core's gear fallback. Pinned from here so it survives DSH

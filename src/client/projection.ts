@@ -33,6 +33,13 @@ export function boundaryOf(turn: TurnLocation | undefined): TurnBoundary {
   };
 }
 
+/**
+ * A settled body step before the closing step of a successful turn.
+ *
+ * This is presentation classification only. Narration is never process content
+ * and never folds. The flag only marks body text that is no longer the turn's
+ * final answer, so copy and fork stay on that final answer.
+ */
 export function isEarlierNarration(data: AssistantChatData, boundary: TurnBoundary): boolean {
   // New body text, a tool call, or a settled step is not a completed turn.
   if (data.status !== 'settled' || boundary.status !== 'closed' || boundary.reason !== 'completed') return false;
@@ -49,13 +56,18 @@ export function processChoiceKey(groupKey: string, boundary: TurnBoundary): stri
   return `${groupKey}:${boundary.status}:${boundary.reason ?? 'pending'}`;
 }
 
-/** A body-only assistant step is not a thinking/process disclosure. */
-export function hasProcessContent(node: ChatConversationViewNode | undefined, boundary: TurnBoundary): boolean {
+/**
+ * A body-only assistant step is not a thinking/process disclosure.
+ *
+ * Narration (text/image/other blocks) is always visible, so it never counts as
+ * foldable process content; only literal reasoning does. Tool calls arrive as
+ * their own flow entries and are checked separately by the reader.
+ */
+export function hasProcessContent(node: ChatConversationViewNode | undefined, _boundary: TurnBoundary): boolean {
   if (!node || node.visibility === 'hidden') return false;
   if (node.kind === 'assistant-step') {
     const data = node.data as AssistantChatData;
-    return data.blocks.some(block => block.kind === 'reasoning' && block.text.trim() !== '')
-      || (isEarlierNarration(data, boundary) && hasVisibleBody(data.blocks));
+    return data.blocks.some(block => block.kind === 'reasoning' && block.text.trim() !== '');
   }
   return node.kind === 'context' || node.kind === 'model-retry' || node.kind === 'system-prompt' || node.kind === 'turn-process'
     || node.kind === 'command' || node.kind === 'manual-compaction' || node.kind === 'compaction';
@@ -99,30 +111,6 @@ export function terminalLabel(reason: string | null): string | null {
     case null: return null;
     default: return `本轮结束状态：${reason}。请在原对话中核对完整记录。`;
   }
-}
-
-/**
- * Which running indicator the reading view must show.
- *
- * Native Chat renders one running label whenever the Session is running. This
- * view splits that label: an open turn draws its own process status, and the
- * waiting indicator covers everything the per-turn status cannot. Choosing
- * `'waiting'` is therefore the fallback for *every* running state whose last
- * turn is not open — no groups yet, the turn outside the timeline window,
- * an unknown boundary, a closed last turn while the next one starts, or a
- * brand-new Session whose nodes have not arrived. Returning `'none'` here
- * would blank the view right after sending, which reads as a dropped reply.
- *
- * @param state - running flag, awaiting-model predicate, and the last turn's status.
- * @returns `'turn'` when the last open turn draws its own status, `'waiting'` when the waiting indicator stands in, `'none'` when idle.
- */
-export function runningIndicator(state: {
-  running: boolean;
-  awaitingModel: boolean;
-  lastTurnStatus: 'open' | 'closed' | 'unknown' | undefined;
-}): 'turn' | 'waiting' | 'none' {
-  if (!state.running) return 'none';
-  return state.lastTurnStatus === 'open' && !state.awaitingModel ? 'turn' : 'waiting';
 }
 
 /**

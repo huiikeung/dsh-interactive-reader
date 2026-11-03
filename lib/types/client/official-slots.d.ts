@@ -90,8 +90,20 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
  * on the official node slot (e.g. message-recall buttons) must keep working inside the
  * Reader, so those entries are mirrored and the Reader's own markup rides along as the
  * seat's fallback (see MainNode in Reader.tsx).
+ * 'assistant-step' is special: the official renderer is priority 0 and Reader keeps
+ * that presentation. A strictly lower priority is a keyed-slot replacement (lowest
+ * priority renders) and is mirrored for body content.
  */
 export declare const READER_OWNED_NODES: ReadonlySet<string>;
+/** Official `AssistantNodeView` registers at priority 0. Lower wins. */
+export declare const OFFICIAL_ASSISTANT_PRIORITY = 0;
+/**
+ * Mirror a chat-node registration into the Reader seat.
+ * Assistant replacements are the entries that would actually replace the
+ * official renderer on the host. The official priority itself stays out, so
+ * Reader keeps its own answer markdown until a plugin opts in.
+ */
+export declare function acceptMirroredChatNode(entry: StoredEntry): boolean;
 /** The documented, type-erased registry inspection/registration boundary. */
 export interface CompositionRegistry {
     spec(key: string): SlotSpec<SlotEntryDef> | undefined;

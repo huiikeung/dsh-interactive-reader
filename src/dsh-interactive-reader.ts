@@ -1,5 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Context } from '@deepseek-ai/cordis';
+import { loadFlags, type Flags } from './flags.js';
+import { createLogger, requestIdOf } from './log.js';
+import { metricsPayload, recordRouteDuration, recordRouteHit, ROUTE_METRICS, ROUTE_SKILL_STATUS } from './metrics.js';
 import { scanGenerativeMcpappsStatus } from './skill-roots.js';
 import { skillsFromListResult, toPublicSkillStatus } from './skill-status.js';
 
@@ -18,6 +21,8 @@ declare module '@deepseek-ai/cordis' {
 export const name = 'dsh-interactive-reader';
 export const inject = ['webServer'];
 
+const log = createLogger({ base: { plugin: name } });
+
 function writeJson(res: ServerResponse, status: number, body: unknown): void {
   res.setHeader('Content-Type', 'application/json');
   res.statusCode = status;
@@ -30,15 +35,39 @@ function skillLister(ctx: Context): (() => Promise<readonly { readonly name?: st
   return async () => skillsFromListResult(await skills.list!({}));
 }
 
-export function apply(ctx: Context): void {
-  console.log('[my-plugins/dsh-interactive-reader] loaded');
+function beginRequest(req: IncomingMessage, res: ServerResponse, route: string): string {
+  const requestId = requestIdOf(req);
+  res.setHeader('X-Request-ID', requestId);
+  recordRouteHit(route);
+  const started = performance.now();
+  res.on('finish', () => {
+    recordRouteDuration(route, performance.now() - started);
+  });
+  log.info('http request', {
+    requestId,
+    route,
+    method: req.method ?? '',
+    url: req.url ?? '',
+    headers: req.headers,
+  });
+  return requestId;
+}
+
+export function apply(ctx: Context, options?: { readonly flags?: Flags }): void {
+  const flags = options?.flags ?? loadFlags();
+  log.info('[my-plugins/dsh-interactive-reader] loaded', { readerEnabled: flags.readerEnabled });
+  if (!flags.readerEnabled) {
+    log.info('route registration skipped', { readerEnabled: false });
+    return;
+  }
 
   if (ctx.webServer) {
     ctx.effect(() => {
       const disposeSkill = ctx.webServer!.register({
         kind: 'exact',
-        path: '/interactive-reader/skill-status',
+        path: ROUTE_SKILL_STATUS,
         handler: async (req, res) => {
+          const requestId = beginRequest(req, res, ROUTE_SKILL_STATUS);
           if (req.method !== 'GET') {
             res.statusCode = 405;
             res.end();
@@ -53,13 +82,31 @@ export function apply(ctx: Context): void {
             });
             writeJson(res, 200, toPublicSkillStatus(status));
           } catch (err) {
+            log.error('skill-status failed', {
+              requestId,
+              error: err instanceof Error ? err.message : String(err),
+            });
             writeJson(res, 500, { ok: false, error: String(err) });
           }
         },
       });
+      const disposeMetrics = ctx.webServer!.register({
+        kind: 'exact',
+        path: ROUTE_METRICS,
+        handler: (req, res) => {
+          beginRequest(req, res, ROUTE_METRICS);
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.end();
+            return;
+          }
+          writeJson(res, 200, metricsPayload());
+        },
+      });
       return () => {
         disposeSkill();
+        disposeMetrics();
       };
-    }, 'dsh-interactive-reader: skill-status route');
+    }, 'dsh-interactive-reader: skill-status and metrics routes');
   }
 }

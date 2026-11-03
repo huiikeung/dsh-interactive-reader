@@ -13,12 +13,25 @@ export interface TurnBoundary {
 }
 export declare function groupNodes(order: readonly string[], get: (key: string) => ChatConversationViewNode | undefined): ReaderGroup[];
 export declare function boundaryOf(turn: TurnLocation | undefined): TurnBoundary;
+/**
+ * A settled body step before the closing step of a successful turn.
+ *
+ * This is presentation classification only. Narration is never process content
+ * and never folds. The flag only marks body text that is no longer the turn's
+ * final answer, so copy and fork stay on that final answer.
+ */
 export declare function isEarlierNarration(data: AssistantChatData, boundary: TurnBoundary): boolean;
 export declare function processExpanded(choice: boolean | undefined, boundary: TurnBoundary): boolean;
 /** Reading while running must not pin the process open after completion. */
 export declare function processChoiceKey(groupKey: string, boundary: TurnBoundary): string;
-/** A body-only assistant step is not a thinking/process disclosure. */
-export declare function hasProcessContent(node: ChatConversationViewNode | undefined, boundary: TurnBoundary): boolean;
+/**
+ * A body-only assistant step is not a thinking/process disclosure.
+ *
+ * Narration (text/image/other blocks) is always visible, so it never counts as
+ * foldable process content; only literal reasoning does. Tool calls arrive as
+ * their own flow entries and are checked separately by the reader.
+ */
+export declare function hasProcessContent(node: ChatConversationViewNode | undefined, _boundary: TurnBoundary): boolean;
 export declare function hasVisibleBody(blocks: readonly AssistantBlock[]): boolean;
 /** Keep native block order. In particular, never lift a later Think above text. */
 export declare function assistantSegments(blocks: readonly AssistantBlock[]): {
@@ -29,26 +42,6 @@ export declare function assistantSegments(blocks: readonly AssistantBlock[]): {
 export declare function toolFailed(block: ToolCallBlock): boolean;
 export declare function toolName(block: ToolCallBlock): string;
 export declare function terminalLabel(reason: string | null): string | null;
-/**
- * Which running indicator the reading view must show.
- *
- * Native Chat renders one running label whenever the Session is running. This
- * view splits that label: an open turn draws its own process status, and the
- * waiting indicator covers everything the per-turn status cannot. Choosing
- * `'waiting'` is therefore the fallback for *every* running state whose last
- * turn is not open — no groups yet, the turn outside the timeline window,
- * an unknown boundary, a closed last turn while the next one starts, or a
- * brand-new Session whose nodes have not arrived. Returning `'none'` here
- * would blank the view right after sending, which reads as a dropped reply.
- *
- * @param state - running flag, awaiting-model predicate, and the last turn's status.
- * @returns `'turn'` when the last open turn draws its own status, `'waiting'` when the waiting indicator stands in, `'none'` when idle.
- */
-export declare function runningIndicator(state: {
-    running: boolean;
-    awaitingModel: boolean;
-    lastTurnStatus: 'open' | 'closed' | 'unknown' | undefined;
-}): 'turn' | 'waiting' | 'none';
 /**
  * Extract the first usable fork anchor seq from candidate message nodes.
  * Only the durable closing message seq cuts the intended turn prefix: an

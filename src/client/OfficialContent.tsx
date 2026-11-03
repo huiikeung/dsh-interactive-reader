@@ -1,13 +1,12 @@
 import { useCallback, useState, useSyncExternalStore, type ReactNode } from 'react';
-import type { ChatConversationViewNode, ChatNodeOwnerProps, TurnTailOwnerProps, UseDisclosure } from '@deepseek-ai/dsh-client-ui-chat/client';
+import type { AssistantActionOwnerProps, ChatConversationViewNode, ChatNode, ChatNodeOwnerProps, TurnTailOwnerProps, UseDisclosure } from '@deepseek-ai/dsh-client-ui-chat/client';
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment';
-import type { AssistantActionOwnerProps } from '@deepseek-ai/dsh-client-ui-chat/client';
+import type { AssistantBlock, ToolCallBlock } from '@deepseek-ai/dsh-client-ui-conversation/client';
 type MessageId = AssistantActionOwnerProps['messageId'];
 import { OFFICIAL_SEATS } from './official-slots.js';
 import type { BlockRenderProps } from './types.js';
 import { chatSeatProps } from './chat-seat.js';
+import { Blocks } from './Blocks.js';
 
 export function OfficialActions({ official, messageId }: Pick<BlockRenderProps, 'official'> & { messageId?: MessageId }) {
   if (!official || !messageId) return null;
@@ -26,9 +25,7 @@ const useToolDisclosure: UseDisclosure = () => {
 export function OfficialTool({ official, block, toolName, cwd, openFile, fallback }: BlockRenderProps & {
   official: NonNullable<BlockRenderProps['official']>; block: ToolCallBlock; toolName: string; fallback: ReactNode;
 }) {
-  const home = official.officialHost
-    ? useSyncExternalStore(official.officialHost.subscribe, official.officialHost.getSnapshot).home
-    : undefined;
+  const home = useSyncExternalStore(official.officialHost.subscribe, official.officialHost.getSnapshot).home;
   return <div data-reader-tool-official>
     {(official.renderSlot as (key: string, owner: object, options: object) => ReactNode)(OFFICIAL_SEATS.tools, {
       callId: block.callId, toolName,
@@ -41,11 +38,8 @@ export function OfficialTool({ official, block, toolName, cwd, openFile, fallbac
   </div>;
 }
 
-export function OfficialNode({ node, fallback, ...render }: BlockRenderProps & { node: ChatConversationViewNode; fallback: ReactNode }) {
-  const official = render.official;
-  const [disclosureReset] = useState(() => createSnapshotStore(0));
-  if (!official) return fallback;
-  const owner: ChatNodeOwnerProps = {
+function chatNodeOwner(render: BlockRenderProps, official: NonNullable<BlockRenderProps['official']>): ChatNodeOwnerProps {
+  return {
     cwd: render.cwd,
     openFile: render.openFile ?? (() => {}),
     openSkill: () => {},
@@ -57,12 +51,53 @@ export function OfficialNode({ node, fallback, ...render }: BlockRenderProps & {
     }),
     fileMentions: official.officialFileMentions,
   };
+}
+
+export function OfficialNode({ node, fallback, ...render }: BlockRenderProps & { node: ChatConversationViewNode; fallback: ReactNode }) {
+  const official = render.official;
+  const [disclosureReset] = useState(() => createSnapshotStore(0));
+  if (!official) return fallback;
   const turn = node.location.kind === 'turn' || node.location.kind === 'step' ? node.location.turn : undefined;
   // The runtime node domain is open; the public SlotMap enumerates the known kinds.
   const renderNode = official.renderSlot as unknown as (key: string, owner: object, options: object) => ReactNode;
   return <div data-reader-official-node={node.kind} {...(node.kind === 'user' || node.kind === 'steering' ? chatSeatProps(node.kind, node.key) : {})}>
-    {renderNode(OFFICIAL_SEATS.nodes, { ...owner, node }, { entryKey: node.kind, hookContext: { turnData: turn?.data, disclosureReset }, fallback })}
+    {renderNode(OFFICIAL_SEATS.nodes, { ...chatNodeOwner(render, official), node }, { entryKey: node.kind, hookContext: { turnData: turn?.data, disclosureReset }, fallback })}
   </div>;
+}
+
+type AssistantBodyProps = BlockRenderProps & {
+  node: ChatNode<'assistant-step'>;
+  blocks: readonly AssistantBlock[];
+  streaming?: boolean;
+  holdFormatting?: boolean;
+  startedAt?: number;
+  interrupted?: boolean;
+  liveText?: boolean;
+};
+
+/**
+ * Body of one assistant segment. A mirrored assistant-step replacement draws
+ * it; Reader markdown is the fallback when no replacement is registered.
+ * The caller keeps reasoning blocks on the reading card.
+ */
+export function OfficialAssistantBody({
+  node, blocks, streaming = false, holdFormatting = false, startedAt, interrupted = false, liveText = false, ...render
+}: AssistantBodyProps) {
+  const official = render.official;
+  const [disclosureReset] = useState(() => createSnapshotStore(0));
+  const fallback = <Blocks {...render} blocks={blocks} streaming={streaming} holdFormatting={holdFormatting} startedAt={startedAt} interrupted={interrupted} liveText={liveText} />;
+  if (!official) return fallback;
+  const turn = node.location.kind === 'turn' || node.location.kind === 'step' ? node.location.turn : undefined;
+  const sameBlocks = blocks.length === node.data.blocks.length && blocks.every((block, index) => block === node.data.blocks[index]);
+  const view = sameBlocks ? node : { ...node, data: { ...node.data, blocks } };
+  const renderNode = official.renderSlot as unknown as (key: string, owner: object, options: object) => ReactNode;
+  // groupPart matches the host split: response skips reasoning. The block
+  // slice is what a replacement that ignores groupPart actually receives.
+  return renderNode(OFFICIAL_SEATS.nodes, { ...chatNodeOwner(render, official), node: view, groupPart: 'response' }, {
+    entryKey: 'assistant-step',
+    hookContext: { turnData: turn?.data, disclosureReset },
+    fallback,
+  });
 }
 
 export function OfficialTail({ official, owner, produced }: Pick<BlockRenderProps, 'official'> & { owner?: TurnTailOwnerProps; produced: readonly string[] }) {

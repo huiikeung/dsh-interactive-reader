@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.3.0
+
+Merged upstream `aa2246740/dsh-better-display` **v0.3.9** (2026-10-27, PR #76 triage
+release) plus the fork adaptations that go with it.
+
+- **Narration is never folded** (upstream #68/#73). Collapsing process hides
+  reasoning cards, tool calls and process records; assistant narration between
+  them always renders in source order. A compact seam (`思考×N · 工具×K`) sits
+  between narration blocks and expands the folded rows in place; the seam is
+  omitted when a live-fold cell already covers the same steps, and the previous
+  body keeps its spacing. `presentLiveTurn` now folds per-run across narration,
+  and `planProcessSeams` decides where seams go. A body-only step no longer
+  advertises process content.
+- **Display-only text transform seam** (upstream #62). A new Cordis service
+  (`dsh-interactive-reader.text-transform`) lets another plugin rewrite
+  reasoning and answer text before the reading reveal; the session, transcript,
+  and fold stay on the original text. The `dsh-interactive-reader.block` chain
+  owner now also receives `presentation`, `holdFormatting`, and `liveText`.
+- **Third-party assistant-step renderers** (upstream #65). A plugin registering
+  a `conversation.chat.node` entry for `assistant-step` at a priority below the
+  official renderer now renders inside the Reader (raw-HTML plugins keep
+  working); Reader keeps reasoning, folding, and process motion.
+- **Rewind rolls the Reader back** (upstream #63/#64). A successful
+  `dsh-rewind-plugin` command cuts the withdrawn range — target message, the
+  rows after it, and the command row — while the turn's process and tail leave
+  only once every content row is gone. Departing turns keep their place and
+  fold for 220 ms (`turn-slots.ts` reconciliation + the #60 retiring deadline);
+  focus inside cut content defers the collapse, a hidden page drops at once.
+- **Sticky lanes survive third-party themes** (upstream #66). Lane bands follow
+  the measured row, stay at least 40px, and each Reader owns its own lane
+  heights, so a theme that clears `--dsw-alias-bg-base` or raises the content
+  font size no longer paints the elapsed-time row over the answer heading.
+- **Reader user bubbles use the host width formula**
+  `min(calc(var(--dsh-chat-content-width, 748px) * 0.702), 82%)` instead of
+  shrink-wrapping (upstream #74), and pending submission bubbles use the host
+  font metrics so they no longer jump when the official bubble replaces them.
+- **Host infra** (upstream #70-era work, adapted): structured request logging
+  with secret redaction (`src/log.ts`), a `flags.json` startup kill switch
+  (`readerEnabled`, located by walking up from the compiled entry; the file now
+  ships in the package), route hit/timing metrics with a new
+  `GET /interactive-reader/metrics` route, and `X-Request-ID` on every response.
+  This fork has no reveal route, so `metrics.ts` tracks only skill-status and
+  metrics.
+- Upstream moved its tests to vitest; this fork keeps node:test. Ported tests
+  were converted back (they only used vitest's re-exported `test`), except
+  `pinned-selection`, which was rewritten on `assert`. New suites: `rewind-cut`
+  (1090 lines pinning the cut contract), `text-transform`, `flags`, `log`,
+  `metrics`, `turn-slots` (via rewind-cut), plus updated `live-turn`,
+  `fold-choreography`, `fold-intensity`, `projection`, `pinned-selection`.
+  The dead fork-only `runningIndicator` helper and its test were dropped.
+  **296 tests pass.**
+- Fork deltas re-applied after the wholesale port: the reveal-outcome chip
+  styles and `.blocks` overflow in the CSS, and McpAppFrame keeps the fork's
+  600px height cap (upstream allows 2400; the lower cap suits NAS panels).
+
 ## 1.2.0
 
 Merged upstream `aa2246740/dsh-better-display` **v0.3.8** (the v0.3.6 release the

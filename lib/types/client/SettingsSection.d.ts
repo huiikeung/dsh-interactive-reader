@@ -51,6 +51,12 @@ type SettingsProps = BetterDisplaySettingsInjected & {
     /** Official settings.section owner share; unused here. */
     close?: () => void;
     t?: (key: SettingsCopyKey) => string;
+    /**
+     * False on surfaces that already carry the plugin's name and description
+     * themselves — the plugin manager's detail page — so the panel renders its
+     * modules alone instead of repeating the header. Defaults to true (Settings).
+     */
+    showHeader?: boolean;
 };
 export declare function SettingsSection(props: SettingsProps): import("react").JSX.Element;
 export {};

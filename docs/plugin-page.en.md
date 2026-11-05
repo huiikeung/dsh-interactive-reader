@@ -18,7 +18,7 @@ Off by default. On, the reading chrome lets wallpaper and skins show through; pa
 
 On by default: new thinking collapses earlier reasoning and tool calls, while narration between blocks always stays visible. A compact seam (`思考×2 · 工具×1`) appears between blocks and expands the folded rows in place. Off, everything stays expanded.
 
-### fnOS file-manager URL
+### File manager URL
 
 Shown only on desktop-less Hosts (fnOS / NAS); on Windows and macOS Hosts this section hides itself. Once filled, 「在文件夹中显示」opens the NAS file manager instead of silently doing nothing.
 

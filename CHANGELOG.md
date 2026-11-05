@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.3
+
+- **「fnOS 文件管理器地址」更名「文件管理地址」**（File manager URL）。该设置本就
+  不限于 fnOS 一家的文件管理器，且现在只在无桌面的宿主上显示，通用的名字更准确；
+  内部偏好键（`fnosFileManagerUrl`）与已保存的值不受影响。详情文档同步改名。
+- **设置模块卡片样式对齐插件管理器自己的卡片**：`.5px solid var(--dsw-alias-border-l3)`
+  边框 + `var(--dsw-radius-lg)` 圆角（此前是 1px border-l2 + 12px 硬编码），与详情页
+  「包含的组件」等卡片同一套设计令牌，两处观感一致。
+- **`plugins.bundle.config` 面板不再重复页头**。详情页自身已带插件名与描述，嵌入的
+  设置面板通过新的 `showHeader: false` 只渲染模块；设置页维持原样。
+- 上游核对：v0.3.9 之后上游设置内容无更新（SettingsSection / settings-copy 均
+  未变动）。303 tests pass.
+
 ## 1.4.2
 
 - **The plugin detail page now renders the live settings panel** instead of only

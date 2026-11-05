@@ -32,12 +32,13 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
-/* One module, one border. `border-l2` rather than `l1`: a white box on a white panel needs
-   an edge you can actually see. */
+/* One module, one border. Tokens follow the plugin manager's own cards
+   (.5px border-l3 edge, radius-lg), so the panel reads the same on the
+   detail page — where the bundle rows beside it use exactly these. */
 .module {
   box-sizing: border-box;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
+  border: .5px solid var(--dsw-alias-border-l3);
+  border-radius: var(--dsw-radius-lg, 12px);
   background: var(--dsw-alias-bg-base);
   overflow: hidden;
 }

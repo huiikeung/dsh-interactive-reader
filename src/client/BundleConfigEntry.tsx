@@ -17,5 +17,6 @@ export function BundleConfigEntry(props: { view: 'summary' | 'page' } & BetterDi
   if (props.view !== 'page') {
     return <span data-interactive-reader-config-summary>{copy.sectionSubtitle}</span>;
   }
-  return <SettingsSection prefs={props.prefs} copy={props.copy} languageTag={props.languageTag} checkSkill={props.checkSkill} probeDesktop={props.probeDesktop} />;
+  // The manager page already carries the plugin name and description; the panel renders its modules alone.
+  return <SettingsSection prefs={props.prefs} copy={props.copy} languageTag={props.languageTag} checkSkill={props.checkSkill} probeDesktop={props.probeDesktop} showHeader={false} />;
 }

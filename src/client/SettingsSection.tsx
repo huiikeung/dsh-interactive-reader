@@ -60,6 +60,12 @@ type SettingsProps = BetterDisplaySettingsInjected & {
   /** Official settings.section owner share; unused here. */
   close?: () => void;
   t?: (key: SettingsCopyKey) => string;
+  /**
+   * False on surfaces that already carry the plugin's name and description
+   * themselves — the plugin manager's detail page — so the panel renders its
+   * modules alone instead of repeating the header. Defaults to true (Settings).
+   */
+  showHeader?: boolean;
 };
 
 type ModuleAttrs = Record<`data-${string}`, string | undefined>;
@@ -194,10 +200,10 @@ export function SettingsSection(props: SettingsProps) {
 
   return (
     <div className={css.section} data-interactive-reader-settings>
-      <header className={css.header}>
+      {props.showHeader !== false && <header className={css.header}>
         <div className={css.headerTitle}>{text(props, copy, 'nav')}</div>
         <p className={css.headerDesc}>{text(props, copy, 'sectionSubtitle')}</p>
-      </header>
+      </header>}
 
       <SwitchModule
         title={text(props, copy, 'openTitle')}

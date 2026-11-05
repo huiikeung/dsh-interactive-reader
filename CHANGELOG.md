@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.4.0
+
+Merged upstream `aa2246740/dsh-better-display` **v0.3.10 → v0.3.12**.
+
+- **Accept Harness 0.2.1-rc.5 and newer 0.2.x** (upstream v0.3.10). The DSH peer
+  union gains `>=0.2.1-rc.1 <0.3.0-0 || 0.2.2-alpha.2`, and the type baseline
+  moved with the runtime: all `@deepseek-ai` devDependencies now pin
+  **0.2.2-alpha.2** (the version this Host runs), so type-checking sees the
+  same API the browser does. `readAttachment` takes the complete
+  `ImageAttachmentRef` (rc.5 verifies bytes/mediaType, not just the id).
+- **Composer stays usable on the reading tab** (upstream #83). When
+  `dsh-claude-style` hides `[data-composer-seat]` off the first conversation
+  tab, a restore rule keyed on `:has([data-dsh-better-display])` applies only
+  while the Reader root is mounted; other tabs keep the skin's choice
+  (`composer-seat.ts` + CSS, locked by the ported specificity test).
+- **Reasoning cards carry a stable per-mount key** (upstream #82). Each
+  reasoning block stamps `data-reader-reasoning-block-key` so another plugin
+  can target one card; identical texts never merge ownership and the key
+  survives source growth, translation, and the original-text fallback. Pinned
+  by a ported contract test (upstream renders the component under vitest
+  mocks; node:test's mock.module cannot intercept through the tsx loader, so
+  this fork pins the contract at the source level).
+- **Official node owners follow the rc.5 contract** (upstream #75 follow-up).
+  `openSkill` and `renderMessageImages` left `ChatNodeOwnerProps`; the two
+  official image seats are now `conversation.chat.message.images` and
+  `conversation.chat.user.images` (verified against the running runtime's
+  SlotMap), and the official hook context passes the flow's
+  `useGroupAction` so browser find can reveal rows hidden `until-found`.
+- **KaTeX 0.16.47 → 0.19.1** (upstream #78); the Reader keeps rendering with
+  the host's KaTeX CSS and does not vendor private fonts.
+- **Terminal labels gain `commandLine`** (`命令第 N 行`), required by the
+  rc.5 `TerminalBlockLabels` contract.
+- New tests: `reader-composer-seat` (specificity + bundle assertion, regex
+  adapted to this fork's unminified CSS embedding), `reasoning-block-key`.
+  The stock-install peer test now covers `0.2.1-rc.5` and `0.2.2-alpha.2`.
+  **303 tests pass.**
+
 ## 1.3.0
 
 Merged upstream `aa2246740/dsh-better-display` **v0.3.9** (2026-10-27, PR #76 triage

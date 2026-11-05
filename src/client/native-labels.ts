@@ -32,6 +32,7 @@ export const readBlockLabels: ReadBlockLabels = {
 
 export const terminalBlockLabels: TerminalBlockLabels = {
   ...foldLabels,
+  commandLine: line => `命令第 ${line} 行`,
   signal: signal => `信号 ${signal}`,
   exitCode: exitCode => `退出码 ${exitCode}`,
   noExitCode: '未知退出码',

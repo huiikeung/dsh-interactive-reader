@@ -1,4 +1,6 @@
+import { type RefObject } from 'react';
 import type { Context } from '@deepseek-ai/cordis';
+import type { UseGroupAction } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { SlotEntryDef, SlotMap, SlotSpec, StoredEntry } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ToolCallBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client';
@@ -30,7 +32,8 @@ declare const FAMILIES: {
     readonly tools: "tool.call.toolview";
     readonly tail: "conversation.chat.turnTail";
     readonly nodes: "conversation.chat.node";
-    readonly images: "conversation.message.images";
+    readonly messageImages: "conversation.chat.message.images";
+    readonly userImages: "conversation.chat.user.images";
 };
 export type OfficialFamily = keyof typeof FAMILIES;
 export declare const OFFICIAL_SEATS: {
@@ -38,7 +41,8 @@ export declare const OFFICIAL_SEATS: {
     readonly tools: "dsh-interactive-reader.official.tools/tool.call.toolview";
     readonly tail: "dsh-interactive-reader.official.tail/conversation.chat.turnTail";
     readonly nodes: "dsh-interactive-reader.official.nodes/conversation.chat.node";
-    readonly images: "dsh-interactive-reader.official.images/conversation.message.images";
+    readonly messageImages: "dsh-interactive-reader.official.messageImages/conversation.chat.message.images";
+    readonly userImages: "dsh-interactive-reader.official.userImages/conversation.chat.user.images";
 };
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -78,9 +82,17 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
         };
         'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
         'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
-        'dsh-interactive-reader.official.images/conversation.message.images': SlotMap['conversation.message.images'];
+        'dsh-interactive-reader.official.messageImages/conversation.chat.message.images': SlotMap['conversation.chat.message.images'];
+        'dsh-interactive-reader.official.userImages/conversation.chat.user.images': SlotMap['conversation.chat.user.images'];
     }
 }
+/**
+ * Searchable hide for official nodes drawn outside the Chat flow viewport.
+ * The flow's own `useGroupAction` is not in scope here; this keeps the same
+ * `hidden="until-found"` contract so browser find can still reveal the row.
+ */
+export declare function useReaderGroupAction(hidden: boolean, reveal: () => void): RefObject<HTMLDivElement>;
+export declare const readerGroupAction: UseGroupAction;
 /**
  * Node kinds this reader already presents itself. Everything else reaches the official
  * renderer through the nodes seat, which is what makes a node kind this fork has never

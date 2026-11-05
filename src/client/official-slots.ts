@@ -1,5 +1,6 @@
-import { createElement, memo, useMemo, type ComponentType, type ReactNode } from 'react';
+import { createElement, memo, useEffect, useLayoutEffect, useMemo, useRef, type ComponentType, type ReactNode, type RefObject } from 'react';
 import type { Context } from '@deepseek-ai/cordis';
+import type { UseGroupAction } from '@deepseek-ai/dsh-client-ui-chat/client';
 import type { SlotEntryDef, SlotMap, SlotSpec, StoredEntry } from '@deepseek-ai/dsh-client-ui-slots';
 import type { ToolCallBlock, MessageImageLoader } from '@deepseek-ai/dsh-client-ui-conversation/client';
 import type { OpenFileOptions } from '@deepseek-ai/dsh-client-ui-chat/client';
@@ -34,7 +35,8 @@ const FAMILIES = {
   tools: 'tool.call.toolview',
   tail: 'conversation.chat.turnTail',
   nodes: 'conversation.chat.node',
-  images: 'conversation.message.images',
+  messageImages: 'conversation.chat.message.images',
+  userImages: 'conversation.chat.user.images',
 } as const;
 export type OfficialFamily = keyof typeof FAMILIES;
 export const OFFICIAL_SEATS = {
@@ -42,7 +44,8 @@ export const OFFICIAL_SEATS = {
   tools: 'dsh-interactive-reader.official.tools/tool.call.toolview',
   tail: 'dsh-interactive-reader.official.tail/conversation.chat.turnTail',
   nodes: 'dsh-interactive-reader.official.nodes/conversation.chat.node',
-  images: 'dsh-interactive-reader.official.images/conversation.message.images',
+  messageImages: 'dsh-interactive-reader.official.messageImages/conversation.chat.message.images',
+  userImages: 'dsh-interactive-reader.official.userImages/conversation.chat.user.images',
 } as const;
 export type OfficialSeat = typeof OFFICIAL_SEATS[OfficialFamily];
 /** Seat name for the mirrored copies of `source`'s contributions. */
@@ -81,7 +84,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'dsh-interactive-reader.official.tools/tool.call.toolview': SlotEntryDef & { kind: 'keyed'; scope: 'session'; owner: OfficialToolOwner };
     'dsh-interactive-reader.official.tail/conversation.chat.turnTail': SlotMap['conversation.chat.turnTail'];
     'dsh-interactive-reader.official.nodes/conversation.chat.node': SlotMap['conversation.chat.node'];
-    'dsh-interactive-reader.official.images/conversation.message.images': SlotMap['conversation.message.images'];
+    'dsh-interactive-reader.official.messageImages/conversation.chat.message.images': SlotMap['conversation.chat.message.images'];
+    'dsh-interactive-reader.official.userImages/conversation.chat.user.images': SlotMap['conversation.chat.user.images'];
   }
 }
 
@@ -99,8 +103,37 @@ const FALLBACK: Record<OfficialFamily, SlotSpec<SlotEntryDef>> = {
   // is the only thing that can be trusted here.
   tail: { kind: 'list', scope: 'session' },
   nodes: { kind: 'keyed', scope: 'session' },
-  images: { kind: 'list', scope: 'session' },
+  messageImages: { kind: 'single', scope: 'session' },
+  userImages: { kind: 'single', scope: 'session' },
 };
+
+/**
+ * Searchable hide for official nodes drawn outside the Chat flow viewport.
+ * The flow's own `useGroupAction` is not in scope here; this keeps the same
+ * `hidden="until-found"` contract so browser find can still reveal the row.
+ */
+export function useReaderGroupAction(hidden: boolean, reveal: () => void): RefObject<HTMLDivElement> {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (element === null) return;
+    if (hidden && element.contains(element.ownerDocument.activeElement)) {
+      reveal();
+      return;
+    }
+    if (hidden) element.setAttribute('hidden', 'until-found');
+    else element.removeAttribute('hidden');
+  }, [hidden, reveal]);
+  useEffect(() => {
+    const element = ref.current;
+    if (element === null) return;
+    element.addEventListener('beforematch', reveal);
+    return () => { element.removeEventListener('beforematch', reveal); };
+  }, [reveal]);
+  return ref;
+}
+
+export const readerGroupAction: UseGroupAction = useReaderGroupAction;
 
 /**
  * Node kinds this reader already presents itself. Everything else reaches the official

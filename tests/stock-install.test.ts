@@ -23,7 +23,7 @@ const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as {
 // node-semver only matches a prerelease against a comparator with the same
 // major.minor.patch tuple, so `>=0.2.0-rc.1 <0.3.0-0` alone would NOT accept the
 // alpha this fork has to load on.
-const HARNESS_PEER = '>=0.1.7-rc.1 <0.1.8 || >=0.2.0-rc.1 <0.3.0-0 || 0.2.1-alpha.1';
+const HARNESS_PEER = '>=0.1.7-rc.1 <0.1.8 || >=0.2.0-rc.1 <0.3.0-0 || 0.2.1-alpha.1 || >=0.2.1-rc.1 <0.3.0-0 || 0.2.2-alpha.2';
 
 test('DSH peer range covers every Harness this fork supports', () => {
   const peers = Object.entries(pkg.peerDependencies).filter(([name]) => name.startsWith('@deepseek-ai/dsh-'));
@@ -34,6 +34,8 @@ test('DSH peer range covers every Harness this fork supports', () => {
     assert.equal(semver.satisfies('0.2.0-rc.2', range), true, name);
     assert.equal(semver.satisfies('0.2.1-alpha.1', range), true, name);
     assert.equal(semver.satisfies('0.2.1', range), true, name);
+    assert.equal(semver.satisfies('0.2.1-rc.5', range), true, name);
+    assert.equal(semver.satisfies('0.2.2-alpha.2', range), true, name);
     assert.equal(semver.satisfies('0.1.6', range), false, name);
     assert.equal(semver.satisfies('0.3.0', range), false, name);
   }

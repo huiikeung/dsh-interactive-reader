@@ -10,7 +10,7 @@ import { BlockBoundary, Blocks, contentBlocks, UserMessageActions } from './Bloc
 import { AssistantNode } from './AssistantNode.js';
 import { ToolActivity, ToolMedia } from './ToolActivity.js';
 import { OfficialNode, OfficialTail } from './OfficialContent.js';
-import { OFFICIAL_SEATS } from './official-slots.js';
+import { OFFICIAL_SEATS, readerGroupAction } from './official-slots.js';
 import { preparingLabel, readerFlow } from './tool-activity.js';
 import { Disclosure, ProcessFragment, RetiringTurns, StatusText, useMotionAllowed, usePinnedSelection, useReadingScroll } from './motion.js';
 import { StreamMotionContext } from './streaming.js';
@@ -199,17 +199,13 @@ const MainNode = memo(function MainNode({ useChat, nodeKey, boundary, pinned, pr
       const owner: ChatNodeOwnerProps & Pick<ReaderProps, 'sessionId'> = {
         cwd: render.cwd,
         openFile: render.openFile ?? (() => {}),
-        openSkill: () => {},
         forkAt: render.forkAt ?? (() => {}),
         inspectCall: callId => official.openView('trajectory', callId),
         loadImage: official.officialImageLoader,
-        renderMessageImages: images => official.renderSlot(OFFICIAL_SEATS.images, {
-          ...images, loadImage: official.officialImageLoader,
-        }),
         fileMentions: official.officialFileMentions,
         sessionId: render.sessionId,
       };
-      const options = { hookContext: { turnData: turn?.data, disclosureReset }, fallback };
+      const options = { hookContext: { turnData: turn?.data, disclosureReset, useGroupAction: readerGroupAction }, fallback };
       rendered = node.kind === 'user'
         ? official.renderSlot(OFFICIAL_SEATS.nodes, { ...owner, node }, { ...options, entryKey: 'user' })
         : official.renderSlot(OFFICIAL_SEATS.nodes, { ...owner, node }, { ...options, entryKey: 'steering' });
@@ -854,6 +850,9 @@ export function Reader(props: ReaderProps) {
 
   // ChatView publishes data-chat-flow="" on its column. Skins treat a
   // scrollport without that hook as inspect-only and hide [data-composer-seat].
+  // dsh-claude-style 0.19.x also hides the host seat whenever the first tab
+  // is not 对话. Reader.module.css restores that seat only while this root
+  // (data-dsh-better-display) is mounted.
   return <StreamMotionContext.Provider value={streamMotion}><ReaderLaneScope><div ref={root} className={css.root} data-reader-build="0.3.4" data-dsh-better-display="0.3.4" data-reader-wait-clock-version="input-v1" data-reader-wait-start={waitAnchor.time ?? undefined} data-motion={motion ? 'on' : 'off'} data-reader-glass={frostedGlass || undefined} data-reader-auto-fold={autoFold ? 'on' : 'off'}>
     <TimelineRail items={timelineItems} activeTurn={activeTurn} busyTurn={busyTurn} onNavigate={onNavigateTurn} />
     <div className={css.column} data-chat-flow="" tabIndex={-1}>

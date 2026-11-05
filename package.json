@@ -1,6 +1,6 @@
 {
   "name": "dsh-interactive-reader",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",
@@ -15,7 +15,8 @@
       "types": "./lib/types/client/index.d.ts",
       "default": "./lib/client.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json"
   },
   "dsh": {
     "bundle": {
@@ -117,6 +118,7 @@
     "THIRD_PARTY_NOTICES.md",
     "CHANGELOG.md",
     "compat",
+    "locale",
     "docs"
   ],
   "engines": {

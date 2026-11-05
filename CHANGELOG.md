@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.1
+
+- **插件管理器里显示中文名**。新增 `locale/zh.json` / `locale/en.json`
+  （`meta.title` 交互阅读 / Interactive Reader，`meta.description` 随语言），
+  package.json `exports` 放行 `./locale/*.json` 并把 `locale` 加入 `files`。
+  宿主在 composition 时读取该目录，title 需重启后刷新；详情文档不受此限。
+- **详情页从 README 换成设置说明**。locale 文件声明 `meta.detail` 指向
+  `docs/plugin-page.zh.md` / `docs/plugin-page.en.md`：逐项解释设置（产物打开
+  方式、毛玻璃、自动折叠与旁白接缝、fnOS 文件管理器地址、generative-mcpapps
+  技能检测）、与其他插件的协作（回退回滚、文本变换服务、第三方渲染器）和
+  安装方式。按界面语言选择文档（zh-CN → zh → en 链），此读取无缓存，已验证
+  `pluginManager/readBundleDetail` 返回 `origin: locale` 的中文文档。
+
 ## 1.4.0
 
 Merged upstream `aa2246740/dsh-better-display` **v0.3.10 → v0.3.12**.

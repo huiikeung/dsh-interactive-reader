@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "交互阅读",
+    "description": "把对话变成可以安静阅读的页面：过程实时折叠、可跳轮次、产物可定位，支持 MCP Apps 卡片。",
+    "detail": "docs/plugin-page.zh.md"
+  }
+}

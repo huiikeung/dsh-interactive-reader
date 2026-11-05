@@ -1,6 +1,6 @@
 {
   "name": "dsh-interactive-reader",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "A calmer reading view for DeepSeek Harness: native process details, live reasoning, and clean final answers.",
   "type": "module",
   "license": "MIT",
@@ -66,6 +66,7 @@
     "@deepseek-ai/dsh-client-store": "0.2.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-chat": "0.2.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-conversation": "0.2.2-alpha.2",
+    "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-primitives": "0.2.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-renderer": "0.2.2-alpha.2",
     "@deepseek-ai/dsh-client-ui-settings": "0.2.2-alpha.2",

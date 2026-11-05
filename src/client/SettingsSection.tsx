@@ -5,6 +5,7 @@ import { foldIntensityOf, frostedGlassOf, type FoldIntensity } from './fold-inte
 import { deliverableOpenModeOf, type DeliverableOpenMode } from './open-file.js';
 import { settingsCopyFor, type SettingsCopy, type SettingsCopyKey } from './settings-copy.js';
 import { CONVENTIONAL_SKILL_ROOTS, detectGenerativeMcpappsSkill, routeSkillProbe, shortestInstallCommand, type SkillStatusProbe, type SkillStatusSnapshot } from './skill-status.js';
+import { UNKNOWN_DESKTOP, type RevealDesktop } from './reveal.js';
 import css from './SettingsSection.module.css';
 
 /**
@@ -47,6 +48,12 @@ export interface BetterDisplaySettingsInjected {
   copy?: SettingsCopy;
   languageTag?: string;
   checkSkill: SkillStatusProbe;
+  /**
+   * Ask the Host what it can do with a produced path on its own machine.
+   * A desktop Host (`available: true`) never uses the fnOS file manager, so
+   * the fnOS section stays hidden there; a headless Host (NAS) shows it.
+   */
+  probeDesktop?: () => Promise<RevealDesktop>;
 }
 
 type SettingsProps = BetterDisplaySettingsInjected & {
@@ -143,6 +150,21 @@ export function SettingsSection(props: SettingsProps) {
   const autoFold = snap.autoFold !== false && snap.foldIntensity !== 0;
   const [fnosUrl, setFnosUrl] = useState(snap.fnosFileManagerUrl ?? '');
   useEffect(() => { setFnosUrl(snap.fnosFileManagerUrl ?? ''); }, [snap.fnosFileManagerUrl]);
+  // The fnOS target only applies where the Host has no desktop (a NAS): a
+  // desktop Host answers the present.host probe with available:true and the
+  // reveal chain skips the template there, so the section would be dead weight.
+  // undefined = probe still in flight — keep the section out until answered,
+  // then show it for headless Hosts or when a URL is already configured (so a
+  // misdetection can still be cleared). No probe at all keeps the old behavior.
+  const [desktop, setDesktop] = useState<RevealDesktop | undefined>();
+  const probeDesktop = props.probeDesktop;
+  useEffect(() => {
+    if (!probeDesktop) return;
+    let live = true;
+    probeDesktop().then(answer => { if (live) setDesktop(answer); }).catch(() => { if (live) setDesktop(UNKNOWN_DESKTOP); });
+    return () => { live = false; };
+  }, [probeDesktop]);
+  const showFnos = desktop ? (!desktop.available || fnosUrl.trim() !== '') : probeDesktop === undefined;
 
   const on = mode === 'sidebar';
   const [skill, setSkill] = useState<SkillStatusSnapshot | undefined>();
@@ -204,7 +226,7 @@ export function SettingsSection(props: SettingsProps) {
         }}
       />
 
-      <FoldModule
+      {showFnos && <FoldModule
         title={text(props, copy, 'fnosTitle')}
         data-interactive-reader-fnos
         data-fnos-configured={fnosUrl.trim() !== '' || undefined}
@@ -224,7 +246,7 @@ export function SettingsSection(props: SettingsProps) {
           }}
         />
         <p className={css.hint}>{text(props, copy, 'fnosTokens')}</p>
-      </FoldModule>
+      </FoldModule>}
 
       <FoldModule
         title={text(props, copy, 'skillTitle')}

@@ -2,6 +2,7 @@ import { type FoldIntensity } from './fold-intensity.js';
 import { type DeliverableOpenMode } from './open-file.js';
 import { type SettingsCopy, type SettingsCopyKey } from './settings-copy.js';
 import { type SkillStatusProbe } from './skill-status.js';
+import { type RevealDesktop } from './reveal.js';
 /**
  * The Interactive Reader section.
  *
@@ -39,6 +40,12 @@ export interface BetterDisplaySettingsInjected {
     copy?: SettingsCopy;
     languageTag?: string;
     checkSkill: SkillStatusProbe;
+    /**
+     * Ask the Host what it can do with a produced path on its own machine.
+     * A desktop Host (`available: true`) never uses the fnOS file manager, so
+     * the fnOS section stays hidden there; a headless Host (NAS) shows it.
+     */
+    probeDesktop?: () => Promise<RevealDesktop>;
 }
 type SettingsProps = BetterDisplaySettingsInjected & {
     /** Official settings.section owner share; unused here. */

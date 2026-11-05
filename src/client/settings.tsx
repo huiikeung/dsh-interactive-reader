@@ -1,9 +1,12 @@
 import type { Context } from '@deepseek-ai/cordis';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
+import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client';
 import type { SessionId } from '@deepseek-ai/dsh-session/types';
 import type {} from './settings-slots.js';
 import { settingsCopyFor, zh, en } from './settings-copy.js';
 import { SettingsSection, type BetterDisplaySettingsInjected, type OpenPrefs } from './SettingsSection.js';
+import { BundleConfigEntry } from './BundleConfigEntry.js';
+import { probeRevealDesktop } from './desktop-probe.js';
 import { composeSkillProbe, firstSessionId, routeSkillProbe, SKILL_STATUS_ROUTE, skillsFromListResult, type SkillStatusProbe } from './skill-status.js';
 import type { HostSkillStatus } from '../skill-status.js';
 
@@ -71,6 +74,7 @@ export function installBetterDisplaySettings(ctx: Context, prefs: OpenPrefs): vo
     copy: settingsCopyFor(languageTag(ctx)),
     languageTag: languageTag(ctx),
     checkSkill,
+    probeDesktop: () => probeRevealDesktop(ctx),
   });
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
@@ -80,4 +84,14 @@ export function installBetterDisplaySettings(ctx: Context, prefs: OpenPrefs): vo
     locale: locale?.bind ? 'interactive-reader' : undefined,
     inject: injected,
   }, SettingsSection));
+  // The bundle's own detail page renders the same live panel between its
+  // description and its rows (view: 'page'); the summary view is the one-liner
+  // the manager may show where a full form does not fit. Keyed by the package
+  // name so the page finds it; both surfaces read and write one preference
+  // store, so a change here is the same change the Settings page makes.
+  ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
+    name: 'plugins.bundle.config',
+    key: 'dsh-interactive-reader',
+    inject: injected,
+  }, BundleConfigEntry));
 }

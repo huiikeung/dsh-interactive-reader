@@ -20,7 +20,7 @@ On by default: new thinking collapses earlier reasoning and tool calls, while na
 
 ### fnOS file-manager URL
 
-Only needed when the Host has no desktop (a NAS): macOS and Windows always use Finder or Explorer. Once filled, 「在文件夹中显示」opens the NAS file manager instead of silently doing nothing.
+Shown only on desktop-less Hosts (fnOS / NAS); on Windows and macOS Hosts this section hides itself. Once filled, 「在文件夹中显示」opens the NAS file manager instead of silently doing nothing.
 
 - Must contain a path placeholder; applies to `/vol{n}/…` paths only.
 - Placeholders: `{path}` raw, `{encodedPath}` URL-encoded, `{name}` folder name.

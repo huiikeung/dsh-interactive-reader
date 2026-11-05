@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.4.2
+
+- **The plugin detail page now renders the live settings panel** instead of only
+  describing them. Registered the manager's `plugins.bundle.config` slot (keyed
+  by this package name): the page view embeds the same Interactive Reader panel
+  the Settings page shows — real switches, the fnOS form, the skill Re-check —
+  reading and writing one preference store with the Settings entry; the summary
+  view is a one-liner for tight spots. Both surfaces share one injected face.
+- **The fnOS file-manager section shows only where it can work.** The settings
+  face now carries the memoized desktop probe (`desktop-probe.ts`, extracted
+  from index.tsx): a desktop Host answers `available: true` and the fnOS
+  section hides itself; a headless NAS — fnOS included — shows it, and a
+  configured URL keeps the section visible even on a misdetection so it can be
+  cleared. Without a probe the old always-show behavior stays. Detail docs
+  updated to say the section is conditional.
+- Plugin-manager client types (`@deepseek-ai/dsh-client-ui-plugin-manager`
+  0.2.2-alpha.2) added as a devDependency for the slot contract.
+
 ## 1.4.1
 
 - **插件管理器里显示中文名**。新增 `locale/zh.json` / `locale/en.json`
